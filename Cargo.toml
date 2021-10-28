@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["tsabelmann <tim.sabelmann@hotmail.de>"]
 edition = "2018"
 
+license-file = "LICENSE"
+documentation = "https://docs.rs/cantools"
+repository = "https://github.com/tsabelmann/cantools"
+readme = "README.md"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
