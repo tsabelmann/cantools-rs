@@ -2,9 +2,9 @@
 name = "cantools"
 version = "0.1.0"
 authors = ["tsabelmann"]
+description = "A can-bus data analysis library"
 edition = "2018"
 
-description = "A can-bus data analysis library"
 license-file = "LICENSE"
 documentation = "https://docs.rs/cantools"
 repository = "https://github.com/tsabelmann/cantools"
