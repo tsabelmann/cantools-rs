@@ -1,7 +1,7 @@
 [package]
 name = "cantools"
 version = "0.1.0"
-authors = ["tsabelmann <tim.sabelmann@hotmail.de>"]
+authors = ["tsabelmann"]
 edition = "2018"
 
 description = "A can-bus data analysis library"
