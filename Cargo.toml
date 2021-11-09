@@ -3,7 +3,7 @@ name = "cantools"
 version = "0.1.0"
 authors = ["tsabelmann"]
 description = "A can-bus data analysis library"
-edition = "2018"
+edition = "2021"
 
 license-file = "LICENSE"
 documentation = "https://docs.rs/cantools"
