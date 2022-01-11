@@ -1,8 +1,34 @@
-
-
+/// Trait provides utility functions that enable a convenient
+/// construction of bit masks.
 pub trait Mask {
+    /// Creates a mask where the least-significant `length` number of bits
+    /// are set to 1 and left-shifted by `shift.`
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::Mask;
+    /// let value: u8 = Mask::mask(4, 4);
+    /// assert_eq!(value, 0xF0);
+    /// ```
     fn mask(length: u16, shift: u16) -> Self;
+
+    /// Sets the bits inside of `bits` to 1.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::Mask;
+    /// let value: u8 = Mask::bit_mask(&[7,4,3,0]);
+    /// assert_eq!(value, 0b10011001);
+    /// ```
     fn bit_mask(bits: &[u16]) -> Self;
+    /// Sets every bit to 1.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::Mask;
+    /// let value: u8 = Mask::full_mask();
+    /// assert_eq!(value, 0b1111_1111);
+    /// ```
     fn full_mask() -> Self;
 }
 
@@ -207,9 +233,9 @@ impl Mask for i64 {
 }
 
 
-
 #[cfg(test)]
 mod tests {
+    use std::i64;
     use super::Mask;
 
     #[test]
@@ -412,6 +438,12 @@ mod tests {
         assert_eq!(value2, -1);
     }
 
+    #[test]
+    fn test_mask_i16_005() {
+        let value: i16 = Mask::mask(1, 15);
+        assert_eq!(value, i16::MIN);
+    }
+
     // i32
     #[test]
     fn test_mask_i32_001() {
@@ -441,6 +473,12 @@ mod tests {
         assert_eq!(value2, -1);
     }
 
+    #[test]
+    fn test_mask_i32_005() {
+        let value: i32 = Mask::mask(1, 31);
+        assert_eq!(value, i32::MIN);
+    }
+
     // i64
     #[test]
     fn test_mask_i64_001() {
@@ -468,5 +506,11 @@ mod tests {
         assert_eq!(&value1, &value2);
         assert_eq!(value1, -1);
         assert_eq!(value2, -1);
+    }
+
+    #[test]
+    fn test_mask_i64_005() {
+        let value: i64 = Mask::mask(1, 63);
+        assert_eq!(value, i64::MIN);
     }
 }
