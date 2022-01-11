@@ -7,7 +7,7 @@
 
 ## Installation
 
-Start a terminal, e.g.`bash`. Then enter
+Start a terminal, e.g., `bash`. Then enter
 
 ```bash
 cargo install cantools
