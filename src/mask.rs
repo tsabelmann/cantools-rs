@@ -106,6 +106,105 @@ impl Mask for u64 {
     }
 }
 
+impl Mask for i8 {
+    fn mask(length: u16, shift: u16) -> Self {
+        let mut result = 0;
+        for _ in 0..(length-1) {
+            result += 1;
+            result <<= 1;
+        }
+        result += 1;
+        result <<= shift;
+        result
+    }
+
+    fn bit_mask(bits: &[u16]) -> Self {
+        let mut result = 0;
+        for bit in bits {
+            result |= 1 << bit;
+        }
+        result
+    }
+
+    fn full_mask() -> Self {
+        0xFFi8
+    }
+}
+
+impl Mask for i16 {
+    fn mask(length: u16, shift: u16) -> Self {
+        let mut result = 0;
+        for _ in 0..(length-1) {
+            result += 1;
+            result <<= 1;
+        }
+        result += 1;
+        result <<= shift;
+        result
+    }
+
+    fn bit_mask(bits: &[u16]) -> Self {
+        let mut result = 0;
+        for bit in bits {
+            result |= 1 << bit;
+        }
+        result
+    }
+
+    fn full_mask() -> Self {
+        0xFF_FFi16
+    }
+}
+
+impl Mask for i32 {
+    fn mask(length: u16, shift: u16) -> Self {
+        let mut result = 0;
+        for _ in 0..(length-1) {
+            result += 1;
+            result <<= 1;
+        }
+        result += 1;
+        result <<= shift;
+        result
+    }
+
+    fn bit_mask(bits: &[u16]) -> Self {
+        let mut result = 0;
+        for bit in bits {
+            result |= 1 << bit;
+        }
+        result
+    }
+
+    fn full_mask() -> Self {
+        0xFF_FF_FF_FFi32
+    }
+}
+
+impl Mask for i64 {
+    fn mask(length: u16, shift: u16) -> Self {
+        let mut result = 0;
+        for _ in 0..(length-1) {
+            result += 1;
+            result <<= 1;
+        }
+        result += 1;
+        result <<= shift;
+        result
+    }
+
+    fn bit_mask(bits: &[u16]) -> Self {
+        let mut result = 0;
+        for bit in bits {
+            result |= 1 << bit;
+        }
+        result
+    }
+
+    fn full_mask() -> Self {
+        0xFF_FF_FF_FF_FF_FF_FF_FFi64
+    }
+}
 
 
 
