@@ -127,7 +127,7 @@ impl Mask for i8 {
     }
 
     fn full_mask() -> Self {
-        0xFFi8
+        -1i8
     }
 }
 
@@ -152,7 +152,7 @@ impl Mask for i16 {
     }
 
     fn full_mask() -> Self {
-        0xFF_FFi16
+        -1i16
     }
 }
 
@@ -177,7 +177,7 @@ impl Mask for i32 {
     }
 
     fn full_mask() -> Self {
-        0xFF_FF_FF_FFi32
+        -1i32
     }
 }
 
@@ -202,7 +202,7 @@ impl Mask for i64 {
     }
 
     fn full_mask() -> Self {
-        0xFF_FF_FF_FF_FF_FF_FF_FFi64
+        -1i64
     }
 }
 
@@ -238,7 +238,235 @@ mod tests {
 
     #[test]
     fn test_mask_u8_005() {
-        let value: u8 = Mask::full_mask();
-        assert_eq!(value, 0xFF);
+        let value: u16 = Mask::full_mask();
+        assert_eq!(value, 0xFFFF);
+    }
+
+    // u16
+    #[test]
+    fn test_mask_u16_001() {
+        let value: u16 = Mask::mask(8,8);
+        assert_eq!(value, 0xFF00);
+    }
+
+    #[test]
+    fn test_mask_u16_002() {
+        let value: u16 = Mask::mask(8,4);
+        assert_eq!(value, 0x0FF0);
+    }
+
+    #[test]
+    fn test_mask_u16_003() {
+        let value: u16 = Mask::mask(1,15);
+        assert_eq!(value, 0b1000_0000_0000_0000u16);
+    }
+
+    #[test]
+    fn test_mask_u16_004() {
+        let value: u16 = Mask::full_mask();
+        assert_eq!(value, 0xFFFF);
+    }
+
+    #[test]
+    fn test_mask_u16_005() {
+        let value1: u16 = Mask::mask(4, 12);
+        let value2: u16 = Mask::bit_mask(&[15,14,13,12]);
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, 0xF0_00);
+        assert_eq!(value2, 0xF0_00);
+    }
+
+     // u32
+    #[test]
+    fn test_mask_u32_001() {
+        let value: u32 = Mask::mask(16,8);
+        assert_eq!(value, 0x00_FF_FF_00);
+    }
+
+    #[test]
+    fn test_mask_u32_002() {
+        let value: u32 = Mask::mask(16,4);
+        assert_eq!(value, 0x00_0F_FF_F0);
+    }
+
+    #[test]
+    fn test_mask_u32_003() {
+        let value: u32 = Mask::mask(1,15);
+        assert_eq!(value, 0b1000_0000_0000_0000u32);
+    }
+
+    #[test]
+    fn test_mask_u32_004() {
+        let value: u32 = Mask::full_mask();
+        assert_eq!(value, 0xFF_FF_FF_FF);
+    }
+
+    #[test]
+    fn test_mask_u32_005() {
+        let value1: u32 = Mask::mask(32,0);
+        let value2: u32 = Mask::full_mask();
+        assert_eq!(value1, value2);
+    }
+
+        #[test]
+    fn test_mask_u32_006() {
+        let value1: u32 = Mask::mask(4, 28);
+        let value2: u32 = Mask::bit_mask(&[31,30,29,28]);
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, 0xF0_00_00_00);
+        assert_eq!(value2, 0xF0_00_00_00);
+    }
+
+     // u64
+    #[test]
+    fn test_mask_u64_001() {
+        let value: u64 = Mask::mask(16,8);
+        assert_eq!(value, 0x00_FF_FF_00);
+    }
+
+    #[test]
+    fn test_mask_u64_002() {
+        let value: u64 = Mask::mask(16,4);
+        assert_eq!(value, 0x00_0F_FF_F0);
+    }
+
+    #[test]
+    fn test_mask_u64_003() {
+        let value: u64 = Mask::mask(1,15);
+        assert_eq!(value, 0b1000_0000_0000_0000);
+    }
+
+    #[test]
+    fn test_mask_u64_004() {
+        let value: u64 = Mask::full_mask();
+        assert_eq!(value, 0xFF_FF_FF_FF_FF_FF_FF_FF);
+    }
+
+    #[test]
+    fn test_mask_u64_005() {
+        let value1: u64 = Mask::mask(64,0);
+        let value2: u64 = Mask::full_mask();
+        assert_eq!(value1, value2);
+    }
+
+    #[test]
+    fn test_mask_u64_006() {
+        let value1: u64 = Mask::mask(4, 60);
+        let value2: u64 = Mask::bit_mask(&[63,62,61,60]);
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, 0xF0_00_00_00_00_00_00_00);
+        assert_eq!(value2, 0xF0_00_00_00_00_00_00_00);
+    }
+
+    // i8
+    #[test]
+    fn test_mask_i8_001() {
+        let value: i8 = Mask::mask(4, 0);
+        assert_eq!(value, 0x0Fi8);
+    }
+
+    #[test]
+    fn test_mask_i8_002() {
+        let value: i8 = Mask::mask(1, 7);
+        assert_eq!(value, -128);
+    }
+
+    #[test]
+    fn test_mask_i8_003() {
+        let value: i8 = Mask::bit_mask(&[1,2,3,4]);
+        assert_eq!(value, 0b0001_1110i8);
+    }
+
+    #[test]
+    fn test_mask_i8_004() {
+        let value: i8 = Mask::full_mask();
+        assert_eq!(value, -1);
+    }
+
+    // i16
+    #[test]
+    fn test_mask_i16_001() {
+        let value: i16 = Mask::mask(4, 0);
+        assert_eq!(value, 0x0F);
+    }
+
+    #[test]
+    fn test_mask_i16_002() {
+        let value1: i16 = Mask::mask(4,12);
+        let value2: i16 = Mask::bit_mask(&[15,14,13,12]);
+        assert_eq!(&value1, &value2);
+    }
+
+    #[test]
+    fn test_mask_i16_003() {
+        let value: i8 = Mask::full_mask();
+        assert_eq!(value, -1);
+    }
+
+    #[test]
+    fn test_mask_i16_004() {
+        let value1: i16 = Mask::mask(16,0);
+        let value2: i16 = Mask::full_mask();
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, -1);
+        assert_eq!(value2, -1);
+    }
+
+    // i32
+    #[test]
+    fn test_mask_i32_001() {
+        let value: i32 = Mask::mask(4, 0);
+        assert_eq!(value, 0x0F);
+    }
+
+    #[test]
+    fn test_mask_i32_002() {
+        let value1: i32 = Mask::mask(4,28);
+        let value2: i32 = Mask::bit_mask(&[31,30,29,28]);
+        assert_eq!(&value1, &value2);
+    }
+
+    #[test]
+    fn test_mask_i32_003() {
+        let value: i32 = Mask::full_mask();
+        assert_eq!(value, -1);
+    }
+
+    #[test]
+    fn test_mask_i32_004() {
+        let value1: i32 = Mask::mask(32,0);
+        let value2: i32 = Mask::full_mask();
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, -1);
+        assert_eq!(value2, -1);
+    }
+
+    // i64
+    #[test]
+    fn test_mask_i64_001() {
+        let value: i64 = Mask::mask(4, 0);
+        assert_eq!(value, 0x0F);
+    }
+
+    #[test]
+    fn test_mask_i64_002() {
+        let value1: i64 = Mask::mask(4,60);
+        let value2: i64 = Mask::bit_mask(&[63,62,61,60]);
+        assert_eq!(&value1, &value2);
+    }
+
+    #[test]
+    fn test_mask_i64_003() {
+        let value: i64 = Mask::full_mask();
+        assert_eq!(value, -1);
+    }
+
+    #[test]
+    fn test_mask_i64_004() {
+        let value1: i64 = Mask::mask(64,0);
+        let value2: i64 = Mask::full_mask();
+        assert_eq!(&value1, &value2);
+        assert_eq!(value1, -1);
+        assert_eq!(value2, -1);
     }
 }
