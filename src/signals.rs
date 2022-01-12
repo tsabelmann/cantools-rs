@@ -1,6 +1,8 @@
 use std::collections::HashSet;
+use core::fmt::{Debug};
 use crate::endian::Endian;
 
+#[derive(Debug)]
 pub struct Bit {
     pub start: u16
 }
@@ -20,6 +22,7 @@ impl Default for Bit {
     }
 }
 
+#[derive(Debug)]
 pub struct Bits {
     pub bits: HashSet<u16>
 }
@@ -44,6 +47,7 @@ impl Default for Bits {
     }
 }
 
+#[derive(Debug)]
 pub struct Unsigned {
     start: u16,
     length: u16,
@@ -81,6 +85,7 @@ impl Default for Unsigned {
     }
 }
 
+#[derive(Debug)]
 struct Signed {
     start: u16,
     length: u16,
@@ -118,6 +123,7 @@ impl Default for Signed {
     }
 }
 
+#[derive(Debug)]
 struct Float32 {
     start: u16,
     factor: f32,
@@ -147,6 +153,7 @@ impl Default for Float32 {
     }
 }
 
+#[derive(Debug)]
 struct Float64 {
     start: u16,
     factor: f64,
@@ -176,6 +183,7 @@ impl Default for Float64 {
     }
 }
 
+#[derive(Debug)]
 struct Raw {
     start: u16,
     length: u16,
