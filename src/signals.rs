@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use core::fmt::{Debug};
 use crate::endian::Endian;
 
 #[derive(Debug)]
@@ -32,17 +31,26 @@ impl Bits {
         if bits.len() == 0 {
             Err(())
         } else {
-            Bits {
-                bits: bits.collect()
+            let mut bits_set = HashSet::<u16>::new();
+            for bit in bits {
+                bits_set.insert(*bit);
             }
+
+            let var = Bits {
+                bits: bits_set
+            };
+            Ok(var)
         }
     }
 }
 
 impl Default for Bits {
     fn default() -> Self {
+        let mut bits_set = HashSet::<u16>::new();
+        bits_set.insert(0);
+
         Bits {
-            bits: [0].collect()
+            bits: bits_set
         }
     }
 }
@@ -58,7 +66,7 @@ pub struct Unsigned {
 
 impl Unsigned {
     fn new(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, ()> {
-        if &length == 0 {
+        if length == 0 {
             Err(())
         } else {
             let var = Unsigned {
@@ -71,6 +79,40 @@ impl Unsigned {
             Ok(var)
         }
     }
+
+    // fn new_2<const N: usize>(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Self {
+    //     match endian {
+    //         Endian::Little => {
+    //             if (start + length - 1) as usize >= 8*N {
+    //                 panic!("Not enough data available")
+    //             } else {
+    //                 Unsigned {
+    //                     start,
+    //                     length,
+    //                     factor,
+    //                     offset,
+    //                     endian
+    //                 }
+    //             }
+    //         },
+    //         Endian::Big => {
+    //             let bit_in_byte = start % 8;
+    //             let byte = start.div(8);
+    //             let new_shift = 8 * byte + (7 - bit_in_byte);
+    //             if ((8 * N - new_shift as usize) as isize) < 0 {
+    //                 panic!("Not enough data available")
+    //             } else {
+    //                 Unsigned {
+    //                     start,
+    //                     length,
+    //                     factor,
+    //                     offset,
+    //                     endian
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 impl Default for Unsigned {
@@ -85,6 +127,34 @@ impl Default for Unsigned {
     }
 }
 
+impl PartialEq<Self> for Unsigned {
+    fn eq(&self, other: &Self) -> bool {
+        if self.start != other.start {
+            return false;
+        }
+
+        if self.length != other.length {
+            return false;
+        }
+
+        if self.factor != other.factor {
+            return false;
+        }
+
+        if self.offset != other.offset {
+            return false;
+        }
+
+        if self.endian != other.endian {
+            return false;
+        }
+
+        return true;
+    }
+}
+
+
+
 #[derive(Debug)]
 struct Signed {
     start: u16,
@@ -96,7 +166,7 @@ struct Signed {
 
 impl Signed {
     fn new(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Result<Signed, ()> {
-        if &length == 0 {
+        if length == 0 {
             Err(())
         } else {
             let var = Signed {
@@ -212,5 +282,37 @@ impl Default for Raw {
             length: 1,
             endian: Endian::Little
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::endian::Endian;
+    use crate::signals::Unsigned;
+
+    // #[test]
+    // #[should_panic]
+    // fn test_unsigned_001() {
+    //     let _var = Unsigned::new_2::<8>(1, 64, 1.0, 0.0, Endian::Little);
+    // }
+
+    // #[test]
+    // #[should_panic]
+    // fn test_unsigned_002() {
+    //     let _var = Unsigned::new_2::<8>(6, 64, 1.0, 0.0, Endian::Big);
+    // }
+
+    #[test]
+    fn test_unsigned_003() {
+        let var1 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
+        let var2 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
+        assert_eq!(var1, var2);
+    }
+
+    #[test]
+    fn test_unsigned_004() {
+        let var1 = Unsigned::new(5, 64, 1.0, 0.0, Endian::Big).unwrap();
+        let var2 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
+        assert_ne!(var1, var2);
     }
 }
