@@ -1,15 +1,50 @@
 use std::collections::HashSet;
 use crate::endian::Endian;
 
-struct Bit {
-    start: u16
+pub struct Bit {
+    pub start: u16
 }
 
-struct Bits {
-    bits: HashSet<u16>
+impl Bit {
+    fn new(start: u16) -> Result<Bit, ()>{
+        let var = Bit{start};
+        Ok(var)
+    }
 }
 
-struct Unsigned {
+impl Default for Bit {
+    fn default() -> Self {
+        Bit {
+            start: 0
+        }
+    }
+}
+
+pub struct Bits {
+    pub bits: HashSet<u16>
+}
+
+impl Bits {
+    fn new(bits: &[u16]) -> Result<Bits, ()> {
+        if bits.len() == 0 {
+            Err(())
+        } else {
+            Bits {
+                bits: bits.collect()
+            }
+        }
+    }
+}
+
+impl Default for Bits {
+    fn default() -> Self {
+        Bits {
+            bits: [0].collect()
+        }
+    }
+}
+
+pub struct Unsigned {
     start: u16,
     length: u16,
     factor: f64,
@@ -45,7 +80,6 @@ impl Default for Unsigned {
         }
     }
 }
-
 
 struct Signed {
     start: u16,
@@ -91,6 +125,17 @@ struct Float32 {
     endian: Endian
 }
 
+impl Float32 {
+    fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
+        Float32 {
+            start,
+            factor,
+            offset,
+            endian
+        }
+    }
+}
+
 impl Default for Float32 {
     fn default() -> Self {
         Float32 {
@@ -107,6 +152,17 @@ struct Float64 {
     factor: f64,
     offset: f64,
     endian: Endian
+}
+
+impl Float64 {
+    fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
+        Float64 {
+            start,
+            factor,
+            offset,
+            endian
+        }
+    }
 }
 
 impl Default for Float64 {
@@ -126,6 +182,21 @@ struct Raw {
     endian: Endian
 }
 
+impl Raw {
+    fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, ()> {
+        if length == 0 {
+            Err(())
+        } else {
+            let var = Raw {
+                start,
+                length,
+                endian
+            };
+            Ok(var)
+        }
+    }
+}
+
 impl Default for Raw {
     fn default() -> Self {
         Raw {
@@ -135,4 +206,3 @@ impl Default for Raw {
         }
     }
 }
-
