@@ -1,5 +1,7 @@
-use std::collections::HashSet;
+use std::ops::Div;
+use crate::data::CANData;
 use crate::endian::Endian;
+use crate::decode::{TryDecode};
 
 #[derive(Debug)]
 pub struct Bit {
@@ -21,36 +23,24 @@ impl Default for Bit {
     }
 }
 
-#[derive(Debug)]
-pub struct Bits {
-    pub bits: HashSet<u16>
-}
+impl TryDecode<bool> for Bit {
+    type Error = ();
 
-impl Bits {
-    fn new(bits: &[u16]) -> Result<Bits, ()> {
-        if bits.len() == 0 {
+    fn try_decode<D: CANData>(&self, data: &D) -> Result<bool, Self::Error> {
+        if self.start >= (8 * data.dlc()) as u16 {
             Err(())
         } else {
-            let mut bits_set = HashSet::<u16>::new();
-            for bit in bits {
-                bits_set.insert(*bit);
+            let start_byte = self.start.div(8);
+            let bit_in_byte = self.start % 8;
+
+            let mut byte = data.data()[start_byte as usize];
+            byte = byte >> bit_in_byte;
+            byte = byte & 0x01;
+            if byte != 0 {
+                Ok(true)
+            } else {
+                Ok(false)
             }
-
-            let var = Bits {
-                bits: bits_set
-            };
-            Ok(var)
-        }
-    }
-}
-
-impl Default for Bits {
-    fn default() -> Self {
-        let mut bits_set = HashSet::<u16>::new();
-        bits_set.insert(0);
-
-        Bits {
-            bits: bits_set
         }
     }
 }
@@ -287,8 +277,9 @@ impl Default for Raw {
 
 #[cfg(test)]
 mod tests {
+    use crate::decode::TryDecode;
     use crate::endian::Endian;
-    use crate::signals::Unsigned;
+    use crate::signals::{Bit, Unsigned};
 
     // #[test]
     // #[should_panic]
@@ -314,5 +305,24 @@ mod tests {
         let var1 = Unsigned::new(5, 64, 1.0, 0.0, Endian::Big).unwrap();
         let var2 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
         assert_ne!(var1, var2);
+    }
+
+
+    #[test]
+    fn test_bit_001() {
+        let bit = Bit::new(1).unwrap();
+        let data = [0b1111_0010u8];
+
+        let decode = bit.try_decode(&data);
+        assert_eq!(decode, Result::Ok(true));
+    }
+
+    #[test]
+    fn test_bit_002() {
+        let bit = Bit::new(0).unwrap();
+        let data = [0b1111_0010u8];
+
+        let decode = bit.try_decode(&data);
+        assert_eq!(decode, Result::Ok(false));
     }
 }
