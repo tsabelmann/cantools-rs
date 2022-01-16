@@ -57,7 +57,7 @@ pub struct Unsigned {
 
 impl Unsigned {
     fn new(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, ()> {
-        if length == 0 {
+        if length == 0 || length > 64 {
             Err(())
         } else {
             let var = Unsigned {
@@ -477,32 +477,23 @@ mod tests {
     use crate::endian::Endian;
     use crate::signals::{Bit, Unsigned, Raw};
 
-    // #[test]
-    // #[should_panic]
-    // fn test_unsigned_001() {
-    //     let _var = Unsigned::new_2::<8>(1, 64, 1.0, 0.0, Endian::Little);
-    // }
+    #[test]
+    fn test_unsigned_001() {
+        let sig = Unsigned::new(1, 64, 1.0, 0.0, Endian::Little);
+        assert_eq!(sig.is_ok(), true)
+    }
 
-    // #[test]
-    // #[should_panic]
-    // fn test_unsigned_002() {
-    //     let _var = Unsigned::new_2::<8>(6, 64, 1.0, 0.0, Endian::Big);
-    // }
+    #[test]
+    fn test_unsigned_002() {
+        let sig = Unsigned::new(1, 65, 1.0, 0.0, Endian::Little);
+        assert_eq!(sig.is_err(), true)
+    }
 
     #[test]
     fn test_unsigned_003() {
-        let var1 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
-        let var2 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
-        assert_eq!(var1, var2);
+        let sig = Unsigned::new(1, 0, 1.0, 0.0, Endian::Little);
+        assert_eq!(sig.is_err(), true)
     }
-
-    #[test]
-    fn test_unsigned_004() {
-        let var1 = Unsigned::new(5, 64, 1.0, 0.0, Endian::Big).unwrap();
-        let var2 = Unsigned::new(6, 64, 1.0, 0.0, Endian::Big).unwrap();
-        assert_ne!(var1, var2);
-    }
-
 
     #[test]
     fn test_decode_bit_001() {
