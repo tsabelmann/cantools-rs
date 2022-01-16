@@ -4,13 +4,21 @@ use crate::data::CANData;
 use crate::endian::Endian;
 use crate::decode::{TryDecode};
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 pub struct Bit {
     pub start: u16
 }
 
 impl Bit {
-    fn new(start: u16) -> Result<Bit, ()>{
+    /// Constructs a new Bit signal.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::Bit;
+    /// let sig = Bit::new(42);
+    /// assert_eq!(sig.unwrap(), Bit {start: 42});
+    /// ```
+    pub fn new(start: u16) -> Result<Bit, ()>{
         let var = Bit{start};
         Ok(var)
     }
@@ -48,15 +56,25 @@ impl TryDecode<bool> for Bit {
 
 #[derive(Debug, PartialEq)]
 pub struct Unsigned {
-    start: u16,
-    length: u16,
-    factor: f64,
-    offset: f64,
-    endian: Endian
+    pub start: u16,
+    pub length: u16,
+    pub factor: f64,
+    pub offset: f64,
+    pub endian: Endian
 }
 
 impl Unsigned {
-    fn new(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, ()> {
+    /// Constructs a new Unsigned signal.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::{Unsigned, Endian};
+    /// let sig = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little);
+    /// assert_eq!(sig.unwrap(), Unsigned {start: 0, length: 8,
+    ///                                    factor: 42.0, offset: 1337.0, endian: Endian::Little});
+    /// ```
+    pub fn new(start: u16, length: u16,
+               factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, ()> {
         if length == 0 || length > 64 {
             Err(())
         } else {
@@ -159,16 +177,26 @@ impl TryDecode<f64> for Unsigned {
 }
 
 #[derive(Debug, PartialEq)]
-struct Signed {
-    start: u16,
-    length: u16,
-    factor: f64,
-    offset: f64,
-    endian: Endian
+pub struct Signed {
+    pub start: u16,
+    pub length: u16,
+    pub factor: f64,
+    pub offset: f64,
+    pub endian: Endian
 }
 
 impl Signed {
-    fn new(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Result<Signed, ()> {
+    /// Constructs a new Signed signal.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::{Signed, Endian};
+    /// let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little);
+    /// assert_eq!(sig.unwrap(), Signed {start: 0, length: 8,
+    ///                                    factor: 42.0, offset: 1337.0, endian: Endian::Little});
+    /// ```
+    pub fn new(start: u16, length: u16,
+               factor: f64, offset: f64, endian: Endian) -> Result<Signed, ()> {
         if length == 0 {
             Err(())
         } else {
@@ -279,16 +307,16 @@ impl TryDecode<f64> for Signed {
 }
 
 
-#[derive(Debug)]
-struct Float32 {
-    start: u16,
-    factor: f32,
-    offset: f32,
-    endian: Endian
+#[derive(Debug,PartialEq)]
+pub struct Float32 {
+    pub start: u16,
+    pub factor: f32,
+    pub offset: f32,
+    pub endian: Endian
 }
 
 impl Float32 {
-    fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
+    pub fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
         Float32 {
             start,
             factor,
@@ -309,16 +337,16 @@ impl Default for Float32 {
     }
 }
 
-#[derive(Debug)]
-struct Float64 {
-    start: u16,
-    factor: f64,
-    offset: f64,
-    endian: Endian
+#[derive(Debug,PartialEq)]
+pub struct Float64 {
+    pub start: u16,
+    pub factor: f64,
+    pub offset: f64,
+    pub endian: Endian
 }
 
 impl Float64 {
-    fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
+    pub fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
         Float64 {
             start,
             factor,
@@ -339,15 +367,23 @@ impl Default for Float64 {
     }
 }
 
-#[derive(Debug)]
-struct Raw {
-    start: u16,
-    length: u16,
-    endian: Endian
+#[derive(Debug,PartialEq)]
+pub struct Raw {
+    pub start: u16,
+    pub length: u16,
+    pub endian: Endian
 }
 
 impl Raw {
-    fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, ()> {
+    /// Constructs a new Raw signal.
+    ///
+    /// # Example
+    /// ```
+    /// use cantools::prelude::{Raw, Endian};
+    /// let sig = Raw::new(42, 8, Endian::Little);
+    /// assert_eq!(sig.unwrap(), Raw {start: 42, length: 8, endian: Endian::Little});
+    /// ```
+    pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, ()> {
         if length == 0 || length > 64 {
             Err(())
         } else {
