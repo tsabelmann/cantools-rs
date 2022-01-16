@@ -70,40 +70,6 @@ impl Unsigned {
             Ok(var)
         }
     }
-
-    // fn new_2<const N: usize>(start: u16, length: u16, factor: f64, offset: f64, endian: Endian) -> Self {
-    //     match endian {
-    //         Endian::Little => {
-    //             if (start + length - 1) as usize >= 8*N {
-    //                 panic!("Not enough data available")
-    //             } else {
-    //                 Unsigned {
-    //                     start,
-    //                     length,
-    //                     factor,
-    //                     offset,
-    //                     endian
-    //                 }
-    //             }
-    //         },
-    //         Endian::Big => {
-    //             let bit_in_byte = start % 8;
-    //             let byte = start.div(8);
-    //             let new_shift = 8 * byte + (7 - bit_in_byte);
-    //             if ((8 * N - new_shift as usize) as isize) < 0 {
-    //                 panic!("Not enough data available")
-    //             } else {
-    //                 Unsigned {
-    //                     start,
-    //                     length,
-    //                     factor,
-    //                     offset,
-    //                     endian
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 impl Default for Unsigned {
