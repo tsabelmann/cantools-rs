@@ -1,4 +1,5 @@
 use std::ops::Div;
+use crate::mask::Mask;
 use crate::data::CANData;
 use crate::endian::Endian;
 use crate::decode::{TryDecode};
@@ -31,10 +32,10 @@ impl TryDecode<bool> for Bit {
             Err(())
         } else {
             let start_byte = self.start.div(8);
-            let bit_in_byte = self.start % 8;
+            let bit_in_start_byte = self.start % 8;
 
             let mut byte = data.data()[start_byte as usize];
-            byte = byte >> bit_in_byte;
+            byte = byte >> bit_in_start_byte;
             byte = byte & 0x01;
             if byte != 0 {
                 Ok(true)
@@ -45,7 +46,7 @@ impl TryDecode<bool> for Bit {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Unsigned {
     start: u16,
     length: u16,
@@ -117,35 +118,68 @@ impl Default for Unsigned {
     }
 }
 
-impl PartialEq<Self> for Unsigned {
-    fn eq(&self, other: &Self) -> bool {
-        if self.start != other.start {
-            return false;
+impl TryDecode<f64> for Unsigned {
+    type Error = ();
+
+    fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
+        match &self.endian {
+            Endian::Little => {
+                if self.start >= (8 * data.dlc() as u16) {
+                    Err(())
+                } else {
+                    let start_byte = self.start.div(8);
+                    let bit_in_start_byte = self.start % 8;
+                    let end_byte = (self.start + self.length - 1).div(8);
+
+                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                    let s = start_byte..=end_byte;
+                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                        match data.data().get(byte_index as usize){
+                            None => {
+                                slice[i] = 0;
+                            },
+                            Some(value) => {
+                                slice[i] = *value;
+                            }
+                        }
+                    }
+
+                    let mut converted = u64::from_le_bytes(slice);
+                    converted >>= bit_in_start_byte;
+                    converted &= u64::mask(self.length, 0);
+
+                    let mut result = converted as f64;
+                    result *= &self.factor;
+                    result += &self.offset;
+                    Ok(result)
+                }
+            },
+            Endian::Big => {
+                Ok(20f64)
+            }
         }
 
-        if self.length != other.length {
-            return false;
-        }
-
-        if self.factor != other.factor {
-            return false;
-        }
-
-        if self.offset != other.offset {
-            return false;
-        }
-
-        if self.endian != other.endian {
-            return false;
-        }
-
-        return true;
+        // if self.start >= (8 * data.dlc()) as u16 {
+        //     Err(())
+        // } else {
+        //     let start_byte = self.start.div(8);
+        //     let bit_in_byte = self.start % 8;
+        //
+        //     let mut byte = data.data()[start_byte as usize];
+        //     byte = byte >> bit_in_byte;
+        //     byte = byte & 0x01;
+        //     if byte != 0 {
+        //         Ok(true)
+        //     } else {
+        //         Ok(false)
+        //     }
+        // }
     }
 }
 
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Signed {
     start: u16,
     length: u16,
@@ -309,7 +343,7 @@ mod tests {
 
 
     #[test]
-    fn test_bit_001() {
+    fn test_decode_bit_001() {
         let bit = Bit::new(1).unwrap();
         let data = [0b1111_0010u8];
 
@@ -318,11 +352,41 @@ mod tests {
     }
 
     #[test]
-    fn test_bit_002() {
+    fn test_decode_bit_002() {
         let bit = Bit::new(0).unwrap();
         let data = [0b1111_0010u8];
 
         let decode = bit.try_decode(&data);
         assert_eq!(decode, Result::Ok(false));
+    }
+
+    #[test]
+    fn test_decode_unsigned_001() {
+        let bit = Unsigned::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let data = [255u8, 0, 0, 0, 0, 0,0, 0];
+
+        let decode = bit.try_decode(&data);
+        println!("{}", &decode.unwrap());
+        assert_eq!(decode, Result::Ok(255f64));
+    }
+
+    #[test]
+    fn test_decode_unsigned_002() {
+        let bit = Unsigned::new(4, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
+
+        let decode = bit.try_decode(&data);
+        println!("{}", &decode.unwrap());
+        assert_eq!(decode, Result::Ok(255f64));
+    }
+
+    #[test]
+    fn test_decode_unsigned_003() {
+        let bit = Unsigned::new(4, 8, 2.0, 1337.0,Endian::Little).unwrap();
+        let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
+
+        let decode = bit.try_decode(&data);
+        println!("{}", &decode.unwrap());
+        assert_eq!(decode, Result::Ok(255f64 * 2.0 + 1337.0));
     }
 }
