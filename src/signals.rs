@@ -124,7 +124,7 @@ impl TryDecode<f64> for Unsigned {
     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
-                if self.start >= (8 * data.dlc() as u16) {
+                if self.start + self.length - 1 >= (8 * data.dlc() as u16) {
                     Err(())
                 } else {
                     let start_byte = self.start.div(8);
@@ -155,29 +155,42 @@ impl TryDecode<f64> for Unsigned {
                 }
             },
             Endian::Big => {
-                Ok(20f64)
+                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+                let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
+                if shift < 0 {
+                    Err(())
+                } else {
+                    let start_byte = self.start.div(8);
+                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                    let end_byte = (end_byte + self.length).div(8);
+
+                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                    let s = start_byte..=end_byte;
+
+                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                        match data.data().get(byte_index as usize){
+                            None => {
+                                slice[7-i] = 0;
+                            },
+                            Some(value) => {
+                                slice[7-i] = *value;
+                            }
+                        }
+                    }
+
+                    let mut converted = u64::from_be_bytes(slice);
+                    converted >>= 7 - self.start % 8;
+                    converted &= u64::mask(self.length, 0);
+
+                    let mut result = converted as f64;
+                    result *= &self.factor;
+                    result += &self.offset;
+                    Ok(result)
+                }
             }
         }
-
-        // if self.start >= (8 * data.dlc()) as u16 {
-        //     Err(())
-        // } else {
-        //     let start_byte = self.start.div(8);
-        //     let bit_in_byte = self.start % 8;
-        //
-        //     let mut byte = data.data()[start_byte as usize];
-        //     byte = byte >> bit_in_byte;
-        //     byte = byte & 0x01;
-        //     if byte != 0 {
-        //         Ok(true)
-        //     } else {
-        //         Ok(false)
-        //     }
-        // }
     }
 }
-
-
 
 #[derive(Debug, PartialEq)]
 struct Signed {
@@ -372,6 +385,16 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_002() {
+        let bit = Unsigned::new(7, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let data = [255u8, 0, 0, 0, 0, 0,0, 0];
+
+        let decode = bit.try_decode(&data);
+        println!("{}", &decode.unwrap());
+        assert_eq!(decode, Result::Ok(255f64));
+    }
+
+    #[test]
+    fn test_decode_unsigned_004() {
         let bit = Unsigned::new(4, 8, 1.0, 0.0,Endian::Little).unwrap();
         let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
 
@@ -381,12 +404,40 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_unsigned_003() {
+    fn test_decode_unsigned_005() {
         let bit = Unsigned::new(4, 8, 2.0, 1337.0,Endian::Little).unwrap();
         let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
 
         let decode = bit.try_decode(&data);
         println!("{}", &decode.unwrap());
         assert_eq!(decode, Result::Ok(255f64 * 2.0 + 1337.0));
+    }
+
+    #[test]
+    fn test_decode_unsigned_006() {
+        let sig = Unsigned::new(3, 8, 2.0, 1337.0,Endian::Big).unwrap();
+        let data = [0b0000_1111, 0b00001111, 0, 0, 0, 0,0, 0];
+
+        let decode = sig.try_decode(&data);
+        println!("{}", &decode.unwrap());
+        assert_eq!(decode, Result::Ok(0b1111_0000 as f64 * 2.0 + 1337.0));
+    }
+
+    #[test]
+    fn test_decode_unsigned_007() {
+        let sig = Unsigned::new(0, 9, 2.0, 1337.0,Endian::Little).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode, Result::Err(()));
+    }
+
+    #[test]
+    fn test_decode_unsigned_008() {
+        let sig = Unsigned::new(6, 8, 2.0, 1337.0,Endian::Big).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode, Result::Err(()));
     }
 }
