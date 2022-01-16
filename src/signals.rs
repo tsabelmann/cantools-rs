@@ -475,7 +475,7 @@ impl TryDecode<u64> for Raw {
 mod tests {
     use crate::decode::TryDecode;
     use crate::endian::Endian;
-    use crate::signals::{Bit, Unsigned};
+    use crate::signals::{Bit, Unsigned, Raw};
 
     // #[test]
     // #[should_panic]
@@ -584,6 +584,60 @@ mod tests {
     #[test]
     fn test_decode_unsigned_008() {
         let sig = Unsigned::new(6, 8, 2.0, 1337.0,Endian::Big).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode, Result::Err(()));
+    }
+
+    #[test]
+    fn test_decode_raw_001() {
+        let sig = Raw::new(0, 8, Endian::Little).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode.unwrap(), 0b0000_1111);
+    }
+
+    #[test]
+    fn test_decode_raw_002() {
+        let sig = Raw::new(4, 8, Endian::Little).unwrap();
+        let data = [0b0000_1111, 0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode.unwrap(), 0b1111_0000);
+    }
+
+    #[test]
+    fn test_decode_raw_003() {
+        let sig = Raw::new(7, 8, Endian::Big).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode.unwrap(), 0b0000_1111);
+    }
+
+    #[test]
+    fn test_decode_raw_004() {
+        let sig = Raw::new(3, 8, Endian::Big).unwrap();
+        let data = [0b0000_1111, 0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode.unwrap(), 0b1111_0000);
+    }
+
+    #[test]
+    fn test_decode_raw_005() {
+        let sig = Raw::new(1, 8, Endian::Little).unwrap();
+        let data = [0b0000_1111];
+
+        let decode = sig.try_decode(&data);
+        assert_eq!(decode, Result::Err(()));
+    }
+
+    #[test]
+    fn test_decode_raw_006() {
+        let sig = Raw::new(6, 8, Endian::Big).unwrap();
         let data = [0b0000_1111];
 
         let decode = sig.try_decode(&data);
