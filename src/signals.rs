@@ -294,9 +294,9 @@ impl TryDecode<f64> for Signed {
                         }
                     }
 
-                    let mut converted = u64::from_be_bytes(slice);
+                    let mut converted = i64::from_be_bytes(slice);
                     converted >>= 7 - self.start % 8;
-                    converted &= u64::mask(self.length, 0);
+                    converted &= i64::mask(self.length, 0);
 
                     if converted & i64::mask(1, self.length) != 0 {
                         converted += !i64::mask(self.length, 0);
@@ -382,7 +382,7 @@ struct Raw {
 
 impl Raw {
     fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, ()> {
-        if length == 0 {
+        if length == 0 || length > 64 {
             Err(())
         } else {
             let var = Raw {
@@ -401,6 +401,72 @@ impl Default for Raw {
             start: 0,
             length: 1,
             endian: Endian::Little
+        }
+    }
+}
+
+impl TryDecode<u64> for Raw {
+    type Error = ();
+
+    fn try_decode<D: CANData>(&self, data: &D) -> Result<u64, Self::Error> {
+        match &self.endian {
+            Endian::Little => {
+                if self.start + self.length - 1 >= (8 * data.dlc() as u16) {
+                    Err(())
+                } else {
+                    let start_byte = self.start.div(8);
+                    let bit_in_start_byte = self.start % 8;
+                    let end_byte = (self.start + self.length - 1).div(8);
+
+                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                    let s = start_byte..=end_byte;
+                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                        match data.data().get(byte_index as usize){
+                            None => {
+                                slice[i] = 0;
+                            },
+                            Some(value) => {
+                                slice[i] = *value;
+                            }
+                        }
+                    }
+
+                    let mut converted = u64::from_le_bytes(slice);
+                    converted >>= bit_in_start_byte;
+                    converted &= u64::mask(self.length, 0);
+                    Ok(converted)
+                }
+            },
+            Endian::Big => {
+                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+                let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
+                if shift < 0 {
+                    Err(())
+                } else {
+                    let start_byte = self.start.div(8);
+                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                    let end_byte = (end_byte + self.length).div(8);
+
+                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                    let s = start_byte..=end_byte;
+
+                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                        match data.data().get(byte_index as usize){
+                            None => {
+                                slice[7-i] = 0;
+                            },
+                            Some(value) => {
+                                slice[7-i] = *value;
+                            }
+                        }
+                    }
+
+                    let mut converted = u64::from_be_bytes(slice);
+                    converted >>= 7 - self.start % 8;
+                    converted &= u64::mask(self.length, 0);
+                    Ok(converted)
+                }
+            }
         }
     }
 }
