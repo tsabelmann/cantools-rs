@@ -4,7 +4,7 @@ use crate::data::CANData;
 use crate::endian::Endian;
 use crate::decode::{TryDecode};
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,Default,PartialEq)]
 pub struct Bit {
     pub start: u16
 }
@@ -24,14 +24,6 @@ impl Bit {
     }
 }
 
-impl Default for Bit {
-    fn default() -> Self {
-        Bit {
-            start: 0
-        }
-    }
-}
-
 impl TryDecode<bool> for Bit {
     type Error = ();
 
@@ -43,8 +35,8 @@ impl TryDecode<bool> for Bit {
             let bit_in_start_byte = self.start % 8;
 
             let mut byte = data.data()[start_byte as usize];
-            byte = byte >> bit_in_start_byte;
-            byte = byte & 0x01;
+            byte >>= bit_in_start_byte;
+            byte &= 0x01;
             if byte != 0 {
                 Ok(true)
             } else {
@@ -54,7 +46,7 @@ impl TryDecode<bool> for Bit {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug,PartialEq)]
 pub struct Unsigned {
     pub start: u16,
     pub length: u16,
@@ -108,7 +100,7 @@ impl TryDecode<f64> for Unsigned {
     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
-                if self.start + self.length - 1 >= (8 * data.dlc() as u16) {
+                if self.start + self.length > (8 * data.dlc() as u16) {
                     Err(())
                 } else {
                     let start_byte = self.start.div(8);
@@ -230,7 +222,7 @@ impl TryDecode<f64> for Signed {
     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
-                if self.start + self.length - 1 >= (8 * data.dlc() as u16) {
+                if self.start + self.length > (8 * data.dlc() as u16) {
                     Err(())
                 } else {
                     let start_byte = self.start.div(8);
@@ -413,7 +405,7 @@ impl TryDecode<u64> for Raw {
     fn try_decode<D: CANData>(&self, data: &D) -> Result<u64, Self::Error> {
         match &self.endian {
             Endian::Little => {
-                if self.start + self.length - 1 >= (8 * data.dlc() as u16) {
+                if self.start + self.length > (8 * data.dlc() as u16) {
                     Err(())
                 } else {
                     let start_byte = self.start.div(8);
@@ -482,19 +474,19 @@ mod tests {
     #[test]
     fn test_unsigned_001() {
         let sig = Unsigned::new(1, 64, 1.0, 0.0, Endian::Little);
-        assert_eq!(sig.is_ok(), true)
+        assert!(sig.is_ok())
     }
 
     #[test]
     fn test_unsigned_002() {
         let sig = Unsigned::new(1, 65, 1.0, 0.0, Endian::Little);
-        assert_eq!(sig.is_err(), true)
+        assert!(sig.is_err())
     }
 
     #[test]
     fn test_unsigned_003() {
         let sig = Unsigned::new(1, 0, 1.0, 0.0, Endian::Little);
-        assert_eq!(sig.is_err(), true)
+        assert!(sig.is_err())
     }
 
     #[test]
