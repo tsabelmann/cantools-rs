@@ -4,9 +4,20 @@ use crate::data::CANData;
 use crate::endian::Endian;
 use crate::decode::{TryDecode};
 
+#[derive(Debug)]
+pub enum LengthError {
+    LengthZero,
+    LengthGreater64
+}
+
+#[derive(Debug)]
+pub enum DataError {
+    NotEnoughData
+}
+
 #[derive(Debug,Default,PartialEq)]
 pub struct Bit {
-    pub start: u16
+    start: u16
 }
 
 impl Bit {
@@ -16,11 +27,14 @@ impl Bit {
     /// ```
     /// use cantools::prelude::Bit;
     /// let sig = Bit::new(42);
-    /// assert_eq!(sig.unwrap(), Bit {start: 42});
+    /// assert_eq!(sig.start(), 42);
     /// ```
-    pub fn new(start: u16) -> Result<Bit, ()>{
-        let var = Bit{start};
-        Ok(var)
+    pub fn new(start: u16) -> Bit {
+        Bit{ start }
+    }
+
+    pub fn start(&self) -> u16 {
+        self.start
     }
 }
 
@@ -66,9 +80,11 @@ impl Unsigned {
     ///                                    factor: 42.0, offset: 1337.0, endian: Endian::Little});
     /// ```
     pub fn new(start: u16, length: u16,
-               factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, ()> {
-        if length == 0 || length > 64 {
-            Err(())
+               factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, LengthError> {
+        if length == 0 {
+            Err(LengthError::LengthZero)
+        } else if length > 64 {
+            Err(LengthError::LengthGreater64)
         } else {
             let var = Unsigned {
                 start,
@@ -188,9 +204,11 @@ impl Signed {
     ///                                    factor: 42.0, offset: 1337.0, endian: Endian::Little});
     /// ```
     pub fn new(start: u16, length: u16,
-               factor: f64, offset: f64, endian: Endian) -> Result<Signed, ()> {
+               factor: f64, offset: f64, endian: Endian) -> Result<Signed, LengthError> {
         if length == 0 {
-            Err(())
+            Err(LengthError::LengthZero)
+        } else if length > 64 {
+            Err(LengthError::LengthGreater64)
         } else {
             let var = Signed {
                 start,
@@ -375,9 +393,11 @@ impl Raw {
     /// let sig = Raw::new(42, 8, Endian::Little);
     /// assert_eq!(sig.unwrap(), Raw {start: 42, length: 8, endian: Endian::Little});
     /// ```
-    pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, ()> {
-        if length == 0 || length > 64 {
-            Err(())
+    pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, LengthError> {
+        if length == 0 {
+            Err(LengthError::LengthZero)
+        } else if length > 64 {
+            Err(LengthError::LengthGreater64)
         } else {
             let var = Raw {
                 start,
@@ -469,6 +489,7 @@ impl TryDecode<u64> for Raw {
 mod tests {
     use crate::decode::TryDecode;
     use crate::endian::Endian;
+    use crate::mask::Mask;
     use crate::signals::{Bit, Unsigned, Raw};
 
     #[test]
@@ -491,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_decode_bit_001() {
-        let bit = Bit::new(1).unwrap();
+        let bit = Bit::new(1);
         let data = [0b1111_0010u8];
 
         let decode = bit.try_decode(&data);
@@ -500,11 +521,22 @@ mod tests {
 
     #[test]
     fn test_decode_bit_002() {
-        let bit = Bit::new(0).unwrap();
+        let bit = Bit::new(0);
         let data = [0b1111_0010u8];
 
         let decode = bit.try_decode(&data);
         assert_eq!(decode, Result::Ok(false));
+    }
+
+    #[test]
+    fn test_decode_bit_003() {
+
+        for i in 0..8 {
+            let bit = Bit::new(i);
+            let data = [u8::mask(1, i)];
+            let decode = bit.try_decode(&data);
+            assert_eq!(decode, Result::Ok(true));
+        }
     }
 
     #[test]
