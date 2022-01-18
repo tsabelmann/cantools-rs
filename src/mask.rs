@@ -235,7 +235,7 @@ impl Mask for i64 {
 
 #[cfg(test)]
 mod tests {
-    use std::i64;
+    use i64;
     use super::Mask;
 
     #[test]
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(value1, value2);
     }
 
-        #[test]
+    #[test]
     fn test_mask_u32_006() {
         let value1: u32 = Mask::mask(4, 28);
         let value2: u32 = Mask::bit_mask(&[31,30,29,28]);
