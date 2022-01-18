@@ -599,6 +599,7 @@ impl TryDecode<u64> for Raw {
 
                     let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
                     let s = start_byte..=end_byte;
+
                     for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
                         match data.data().get(byte_index as usize){
                             None => {
@@ -624,23 +625,24 @@ impl TryDecode<u64> for Raw {
                 } else {
                     let start_byte = self.start.div(8);
                     let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + self.length).div(8);
+                    let end_byte = (end_byte + self.length - 1).div(8);
 
                     let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
                     let s = start_byte..=end_byte;
 
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    let min_data = min(8, s.len());
+                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
                         match data.data().get(byte_index as usize){
                             None => {
-                                slice[7-i] = 0;
+                                slice[min_data-i-1] = 0;
                             },
                             Some(value) => {
-                                slice[7-i] = *value;
+                                slice[min_data-i-1] = *value;
                             }
                         }
                     }
 
-                    let mut converted = u64::from_be_bytes(slice);
+                    let mut converted = u64::from_le_bytes(slice);
                     converted >>= 7 - self.start % 8;
                     converted &= u64::mask(self.length, 0);
                     Ok(converted)
@@ -882,7 +884,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode.unwrap(), 0b0000_1111);
+        assert_eq!(decode, Result::Ok(0b0000_1111));
     }
 
     #[test]
@@ -892,7 +894,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode.unwrap(), 0b1111_0000);
+        assert_eq!(decode, Result::Ok(0b1111_0000));
     }
 
     #[test]
