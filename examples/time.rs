@@ -1,4 +1,4 @@
-use cantools::io::logs::CANDumpLog;
+use cantools::logs::CANDumpLog;
 use std::time::Instant;
 
 fn main() {
