@@ -6,7 +6,6 @@ use std::io;
 use std::io::{BufReader, BufRead, Lines};
 use std::ops::Div;
 
-
 pub struct CANDump {
     file: File
 }
