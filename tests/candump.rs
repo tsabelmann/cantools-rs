@@ -1,4 +1,4 @@
-use cantools::io::logs::{CANDumpLog, CANDumpLogEntry};
+use cantools::logs::{CANDumpLog, CANDumpLogEntry};
 
 #[test]
 fn candump_log_empty() {
