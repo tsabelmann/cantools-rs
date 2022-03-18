@@ -14,7 +14,7 @@ impl CANData for Vec<u8> {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::CANData;
+    /// use cantools::data::CANData;
     /// let v = Vec::<u8>::new();
     /// assert_eq!(CANData::data(&v), &[]);
     /// ```
@@ -26,7 +26,7 @@ impl CANData for Vec<u8> {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::CANData;
+    /// use cantools::data::CANData;
     /// let v = Vec::<u8>::new();
     /// assert_eq!(CANData::dlc(&v), 0);
     /// ```
@@ -38,7 +38,7 @@ impl CANData for Vec<u8> {
 
 impl CANData for &[u8] {
     /// ```
-    /// use cantools::prelude::CANData;
+    /// use cantools::data::CANData;
     /// let v : [u8; 0] = [];
     /// assert_eq!(CANData::data(&v), &[]);
     /// ```
@@ -48,7 +48,7 @@ impl CANData for &[u8] {
 
     /// # Example
     /// ```
-    /// use cantools::prelude::CANData;
+    /// use cantools::data::CANData;
     /// let v : [u8; 0] = [];
     /// assert_eq!(CANData::dlc(&v), 0);
     /// ```
