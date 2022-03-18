@@ -6,7 +6,7 @@ pub trait Mask {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::Mask;
+    /// use cantools::mask::Mask;
     /// let value: u8 = Mask::mask(4, 4);
     /// assert_eq!(value, 0xF0);
     /// ```
@@ -16,7 +16,7 @@ pub trait Mask {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::Mask;
+    /// use cantools::mask::Mask;
     /// let value: u8 = Mask::bit_mask(&[7,4,3,0]);
     /// assert_eq!(value, 0b10011001);
     /// ```
@@ -25,7 +25,7 @@ pub trait Mask {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::Mask;
+    /// use cantools::mask::Mask;
     /// let value: u8 = Mask::full_mask();
     /// assert_eq!(value, 0b1111_1111);
     /// ```
@@ -235,7 +235,6 @@ impl Mask for i64 {
 
 #[cfg(test)]
 mod tests {
-    use i64;
     use super::Mask;
 
     #[test]
