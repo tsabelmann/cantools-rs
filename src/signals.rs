@@ -26,7 +26,7 @@ impl Bit {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::Bit;
+    /// use cantools::signals::Bit;
     /// let sig = Bit::new(42);
     /// assert_eq!(sig.start(), 42);
     /// ```
@@ -75,7 +75,8 @@ impl Unsigned {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::{Unsigned, Endian};
+    /// use cantools::signals::{Unsigned};
+    /// use cantools::endian::Endian;
     /// let sig = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16,
@@ -198,7 +199,8 @@ impl Signed {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::{Signed, Endian};
+    /// use cantools::signals::Signed;
+    /// use cantools::endian::Endian;
     /// let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16,
@@ -328,7 +330,8 @@ impl Float32 {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::{Float32, Endian};
+    /// use cantools::signals::Float32;
+    /// use cantools::endian::Endian;
     /// let sig = Float32::new(0, 42.0, 1337.0, Endian::Little);
     /// ```
     pub fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
@@ -442,7 +445,8 @@ impl Float64 {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::{Float64, Endian};
+    /// use cantools::signals::Float64;
+    /// use cantools::endian::Endian;
     /// let sig = Float64::new(0, 42.0, 1337.0, Endian::Little);
     /// ```
     pub fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
@@ -555,7 +559,8 @@ impl Raw {
     ///
     /// # Example
     /// ```
-    /// use cantools::prelude::{Raw, Endian};
+    /// use cantools::signals::Raw;
+    /// use cantools::endian::Endian;
     /// let sig = Raw::new(42, 8, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, LengthError> {
@@ -657,8 +662,7 @@ mod tests {
     use crate::decode::TryDecode;
     use crate::endian::Endian;
     use crate::mask::Mask;
-    use crate::prelude::{DataError, Float32, Signed};
-    use crate::signals::{Bit, Unsigned, Raw};
+    use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
 
     #[test]
     fn test_unsigned_001() {
