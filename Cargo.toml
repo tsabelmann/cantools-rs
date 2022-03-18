@@ -13,3 +13,11 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[features]
+default = ["signals", "decode"]
+decode = []
+encode = []
+signals = []
+peak = []
+prelude = []
