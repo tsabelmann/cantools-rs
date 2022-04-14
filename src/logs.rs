@@ -4,7 +4,9 @@ use std::iter::{Iterator, IntoIterator};
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, BufRead, Lines};
+use std::str::FromStr;
 use std::ops::Div;
+
 
 pub struct CANDump {
     file: File
@@ -35,7 +37,6 @@ impl CANData for CANDumpEntry {
     fn data(&self) -> &[u8] {
         &self.data
     }
-
     fn dlc(&self) -> usize {
         self.data.len()
     }
@@ -51,6 +52,62 @@ impl CANDumpEntry {
     }
 }
 
+pub enum CANDumpEntryParseError {
+    MissingInterfaceData,
+    MissingCanIdData,
+    MissingDlcData,
+    ParseDlcError,
+    ParseCanIdError,
+    ParseCanDataError,
+    DlcDataError
+}
+
+impl FromStr for CANDumpEntry {
+    type Err = CANDumpEntryParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let splits = s
+            .split(' ')
+            .collect::<Vec<_>>();
+
+        let interface = match splits.get(0).copied() {
+            Some(interface) => interface,
+            None => return Err(CANDumpEntryParseError::MissingInterfaceData)
+        };
+
+        let can_id = match splits
+            .get(1).copied().map(|e| u32::from_str_radix(e, 16)) {
+            Some(Ok(can_id)) => can_id,
+            _ => return Err(CANDumpEntryParseError::MissingCanIdData)
+        };
+
+        let mut data = Vec::new();
+        for entry in splits.into_iter().skip(3) {
+            match u8::from_str_radix(entry, 16) {
+                Ok(u8_entry) => data.push(u8_entry),
+                _ => return Err(CANDumpEntryParseError::CanDataParseError)
+            }
+        }
+
+        Ok(CANDumpEntry::new(interface, can_id, data))
+    }
+}
+
+impl ToString for CANDumpEntry {
+    fn to_string(&self) -> String {
+        let data_string = self.data.iter()
+            .map(|x| format!("{:02X}", x))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        format!("{} {:08X} [{}] {}",
+                self.interface,
+                self.can_id,
+                self.data.len(),
+                data_string)
+    }
+}
+
 pub struct CANDumpIterator {
     lines: Lines<BufReader<File>>
 }
@@ -62,30 +119,10 @@ impl Iterator for CANDumpIterator {
             let line = self.lines.next();
             match line {
                 Some(Ok(line)) => {
-                    let splits = line
-                        .split(' ')
-                        .collect::<Vec<_>>();
-
-                    let interface = match splits.get(0).copied() {
-                        Some(interface) => interface,
-                        None => continue
-                    };
-
-                    let can_id = match splits
-                        .get(1).copied().map(|e| u32::from_str_radix(e, 16)) {
-                        Some(Ok(can_id)) => can_id,
-                        _ => continue
-                    };
-
-                    let mut data = Vec::new();
-                    for entry in splits.into_iter().skip(3) {
-                        match u8::from_str_radix(entry, 16) {
-                            Ok(u8_entry) => data.push(u8_entry),
-                            _ => continue
-                        }
+                    match line.parse::<Self::Item>() {
+                        Ok(entry) => return Some(entry),
+                        Err(_) => continue
                     }
-
-                    return Some(CANDumpEntry::new(interface, can_id, data));
                 },
                 Some(Err(_)) => continue,
                 None => return None
@@ -143,6 +180,124 @@ impl CANDumpLogEntry {
     }
 }
 
+pub enum CANDumpLogEntryParseError {
+    MissingTimestampData,
+    ParseTimestampError,
+    MissingInterfaceData,
+    MissingCompoundCanData,
+    MissingCanIdData,
+    MissingCanData,
+    MissingFlagData,
+    ParseCanIdError,
+    ParseCanDataError,
+    ParseFlagError,
+    Unspecified
+}
+
+impl FromStr for CANDumpLogEntry {
+    type Err = CANDumpLogEntryParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let splits = s.split(' ').take(3).collect::<Vec<_>>();
+
+        let timestamp = match splits.get(0).copied() {
+            Some(timestamp) => timestamp,
+            None => return Err(CANDumpLogEntryParseError::MissingTimestampData)
+        };
+
+        let timestamp = match timestamp[1..timestamp.len() - 1].parse::<f64>() {
+            Ok(timestamp) => timestamp,
+            Err(_) => return Err(CANDumpLogEntryParseError::ParseTimestampError)
+        };
+
+        let interface = match splits.get(1).copied() {
+            Some(interface) => interface,
+            None => return Err(CANDumpLogEntryParseError::MissingInterfaceData)
+        };
+
+        let can_data = match splits.get(2).copied() {
+            Some(can_data) => can_data,
+            None => return Err(CANDumpLogEntryParseError::MissingCompoundCanData)
+        };
+
+        let can_data_splits = can_data.split('#')
+            .take(3)
+            .collect::<Vec<_>>();
+
+        return match can_data_splits.len() {
+            2 => {
+                let can_id_string = match can_data_splits.get(0).copied() {
+                    Some(can_id_string) => can_id_string,
+                    None => return Err(CANDumpLogEntryParseError::MissingCanIdData)
+                };
+
+                let can_id = match u32::from_str_radix(can_id_string, 16) {
+                    Ok(can_id) => can_id,
+                    Err(_) => return Err(CANDumpLogEntryParseError::ParseCanIdError)
+                };
+
+                let data_string = match can_data_splits.get(1).copied() {
+                    Some(data_string) => data_string,
+                    None => return Err(CANDumpLogEntryParseError::MissingCanData)
+                };
+
+                let mut data = Vec::new();
+                for i in 0..data_string.len().div(2) {
+                    match u8::from_str_radix(&data_string[2 * i..2 * i + 2], 16) {
+                        Ok(value) => data.push(value),
+                        Err(_) => return Err(CANDumpLogEntryParseError::ParseCanDataError)
+                    };
+                }
+
+                Ok(CANDumpLogEntry::new(timestamp, interface, can_id, data, None))
+            },
+            3 => {
+                let can_id_string = match can_data_splits.get(0).copied() {
+                    Some(can_id_string) => can_id_string,
+                    None => return Err(CANDumpLogEntryParseError::MissingCanIdData)
+                };
+
+                let can_id = match u32::from_str_radix(can_id_string, 16) {
+                    Ok(can_id) => can_id,
+                    Err(_) => return Err(CANDumpLogEntryParseError::ParseCanIdError)
+                };
+
+                let data_string = match can_data_splits.get(2).copied() {
+                    Some(data_string) => data_string,
+                    None => return Err(CANDumpLogEntryParseError::MissingCanData)
+                };
+
+                let flag_string = match data_string.get(0..1) {
+                    Some(flag_string) => flag_string,
+                    None => return Err(CANDumpLogEntryParseError::MissingFlagData)
+                };
+
+                let flag = match u8::from_str_radix(flag_string, 16) {
+                    Ok(flag) => flag,
+                    Err(_) => return Err(CANDumpLogEntryParseError::ParseFlagError)
+                };
+
+                let mut data = Vec::new();
+                for i in 0..(data_string.len() - 1).div(2) {
+                    match u8::from_str_radix(&data_string[2 * i + 1..2 * i + 2 + 1], 16) {
+                        Ok(value) => data.push(value),
+                        Err(_) => return Err(CANDumpLogEntryParseError::ParseCanDataError)
+                    };
+                }
+
+                Ok(CANDumpLogEntry::new(timestamp, interface, can_id, data, Some(flag)))
+            },
+            _ => Err(CANDumpLogEntryParseError::Unspecified)
+        }
+    }
+}
+
+impl ToString for CANDumpLogEntry {
+    fn to_string(&self) -> String {
+        "".to_string()
+    }
+}
+
 impl CANData for CANDumpLogEntry {
     fn data(&self) -> &[u8] {
         &self.data
@@ -164,59 +319,9 @@ impl Iterator for CANDumpLogIterator {
             let line = self.lines.next();
             match line {
                 Some(Ok(line)) => {
-                    if let [timestamp_string, interface, can_id_data_string] = line
-                        .split(' ')
-                        .take(3)
-                        .collect::<Vec<_>>()[..]
-                    {
-                        let timestamp = match timestamp_string[1..timestamp_string.len() - 1]
-                            .parse::<f64>()
-                        {
-                            Ok(timestamp) => timestamp,
-                            Err(_) => continue
-                        };
-
-                        if let [can_id_string, _, data_string] = can_id_data_string
-                            .split('#')
-                            .take(3)
-                            .collect::<Vec<_>>()[..]
-                        {
-                            let can_id = match u32::from_str_radix(can_id_string, 16) {
-                                Ok(can_id) => can_id,
-                                Err(_) => continue
-                            };
-
-                            let flag = match u8::from_str_radix(&data_string[0..1], 16) {
-                                Ok(flag) => flag,
-                                Err(_) => continue
-                            };
-
-                            let mut data = Vec::new();
-                            for i in 0..(data_string.len() - 1).div(2) {
-                                let value = u8::from_str_radix(&data_string[2*i+1..2*i+2+1], 16).unwrap();
-                                data.push(value);
-                            }
-
-                            return Some(Self::Item::new(timestamp, interface, can_id, data, Some(flag)));
-                        }
-
-                        if let [can_id_string, data_string] = can_id_data_string
-                            .split('#')
-                            .take(2)
-                            .collect::<Vec<_>>()[..]
-                        {
-                            let can_id = match u32::from_str_radix(can_id_string, 16) {
-                                Ok(can_id) => can_id,
-                                Err(_) => continue
-                            };
-
-                            let mut data = Vec::new();
-                            for i in 0..data_string.len().div(2) {
-                                data.push(u8::from_str_radix(&data_string[2*i..2*i+2], 16).unwrap())
-                            }
-
-                            return Some(Self::Item::new(timestamp, interface, can_id, data, None));
-                        }
+                    match line.parse::<CANDumpLogEntry>() {
+                        Ok(entry) => return Some(entry),
+                        Err(_) => continue
                     }
                 },
                 Some(Err(_)) => continue,
