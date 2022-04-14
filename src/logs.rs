@@ -53,6 +53,7 @@ impl CANDumpEntry {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CANDumpEntryParseError {
     MissingInterfaceData,
     MissingCanIdData,
@@ -60,7 +61,8 @@ pub enum CANDumpEntryParseError {
     ParseDlcError,
     ParseCanIdError,
     ParseCanDataError,
-    DlcDataError
+    DlcDataMismatch,
+    Unspecified
 }
 
 impl FromStr for CANDumpEntry {
@@ -82,12 +84,26 @@ impl FromStr for CANDumpEntry {
             _ => return Err(CANDumpEntryParseError::MissingCanIdData)
         };
 
+        let dlc_string = match splits.get(2).copied() {
+            Some(dlc_string) => dlc_string,
+            None => return Err(CANDumpEntryParseError::MissingDlcData)
+        };
+
+        let dlc = match dlc_string[1..dlc_string.len()-1].parse::<usize>() {
+            Ok(dlc) => dlc,
+            Err(_) => return Err(CANDumpEntryParseError::ParseDlcError)
+        };
+
         let mut data = Vec::new();
         for entry in splits.into_iter().skip(3) {
             match u8::from_str_radix(entry, 16) {
-                Ok(u8_entry) => data.push(u8_entry),
-                _ => return Err(CANDumpEntryParseError::ParseCanIdError)
+                Ok(value) => data.push(value),
+                _ => return Err(CANDumpEntryParseError::ParseCanDataError)
             }
+        }
+
+        if dlc != data.len() {
+            return Err(CANDumpEntryParseError::DlcDataMismatch);
         }
 
         Ok(CANDumpEntry::new(interface, can_id, data))
@@ -181,6 +197,7 @@ impl CANDumpLogEntry {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CANDumpLogEntryParseError {
     MissingTimestampData,
     ParseTimestampError,
