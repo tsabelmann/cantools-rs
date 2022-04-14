@@ -1,3 +1,4 @@
+use std::fmt::format;
 use crate::data::CANData;
 use std::path::{Path};
 use std::iter::{Iterator, IntoIterator};
@@ -85,7 +86,7 @@ impl FromStr for CANDumpEntry {
         for entry in splits.into_iter().skip(3) {
             match u8::from_str_radix(entry, 16) {
                 Ok(u8_entry) => data.push(u8_entry),
-                _ => return Err(CANDumpEntryParseError::CanDataParseError)
+                _ => return Err(CANDumpEntryParseError::ParseCanIdError)
             }
         }
 
@@ -294,7 +295,29 @@ impl FromStr for CANDumpLogEntry {
 
 impl ToString for CANDumpLogEntry {
     fn to_string(&self) -> String {
-        "".to_string()
+        let data_string = self.data
+            .iter()
+            .map(|x| format!("{:02X}", x))
+            .collect::<Vec<_>>()
+            .join("");
+
+        return match self.flag {
+            Some(flag) => {
+                format!("({}) {} {:08X}##{:1X}{}",
+                        self.timestamp,
+                        self.interface,
+                        self.can_id,
+                        flag,
+                        data_string)
+            },
+            None => {
+                format!("({}) {} {:08X}#{}",
+                        self.timestamp,
+                        self.interface,
+                        self.can_id,
+                        data_string)
+            }
+        }
     }
 }
 
