@@ -1,4 +1,4 @@
-use cantools::logs::{CANDump, CANDumpEntry, CANDumpLog, CANDumpLogEntry};
+use cantools::logs::{CANDump, CANDumpEntry, CANDumpEntryParseError, CANDumpLog, CANDumpLogEntry};
 
 #[test]
 fn can_dump_raw_empty() {
@@ -28,6 +28,21 @@ fn can_dump_raw_once_2() {
                                                           vec)));
     assert_eq!(iterator.next(), None);
 }
+
+#[test]
+fn can_dump_raw_parse_1() {
+    let entry = "can0 00001337 [1] 01".parse::<CANDumpEntry>();
+    assert_eq!(entry.is_ok(), true);
+    assert_eq!(entry.unwrap(), CANDumpEntry::new("can0",0x1337,vec![0x01]));
+}
+
+#[test]
+fn can_dump_raw_parse_2() {
+    let entry = "can0 00001337 [2] 01".parse::<CANDumpEntry>();
+    assert_eq!(entry.is_err(), true);
+    assert_eq!(entry, Err(CANDumpEntryParseError::DlcDataMismatch));
+}
+
 
 #[test]
 fn can_dump_log_empty() {
