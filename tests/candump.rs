@@ -41,6 +41,14 @@ fn can_dump_raw_parse_2() {
     assert_eq!(entry, Err(CANDumpEntryParseError::DlcDataMismatch));
 }
 
+#[test]
+fn can_dump_raw_parse_3() {
+    let entry = CANDumpEntry::new("can0", 0x1337, vec![0x01]);
+    let entry_string = entry.to_string();
+    let entry2 = entry_string.parse();
+    assert_eq!(entry, entry2.unwrap());
+}
+
 
 #[test]
 fn can_dump_log_empty() {
