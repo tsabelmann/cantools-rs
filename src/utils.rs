@@ -1,8 +1,20 @@
-/// Trait provides utility functions that enable a convenient
-/// construction of bit masks.
+//! Module providing utility traits used for bit-masks (see [Mask]) and describing endianess
+//! (see [Endian]).
+//!
+//! The [Mask] trait provides methods that model different ways to create bit-masks. The
+//! [mask](Mask::mask) method creates a bit-mask of a specified `length` and `left-shift`.
+//! [bit_mask](Mask::bit_mask) creates a bit-mask where the specified bits of the slice are set to
+//! `1`. Finally, [full_mask](Mask::full_mask) constructs a bit-mask where every bit is set to `1`.
+//!
+//! The [Endian] type models two variants: [Little](Endian::Little) and [Big](Endian::Big) endian
+//! used to describe the byte layout. These differentiation is essential for modelling different bit
+//! layouts used by signals to decode and encode data.
+//!
+
+/// A trait providing methods for construction different kinds of bit-masks.
 pub trait Mask {
-    /// Creates a mask where the least-significant `length` number of bits
-    /// are set to 1 and left-shifted by `shift.`
+    /// Creates a bit-mask where the least-significant `length` number of bits
+    /// are set to `1` and left-shifted by `shift.`
     ///
     /// # Example
     /// ```
@@ -12,7 +24,7 @@ pub trait Mask {
     /// ```
     fn mask(length: u16, shift: u16) -> Self;
 
-    /// Sets the bits inside of `bits` to 1.
+    /// Creates a bit-mask where the bits inside of `bits` are set to `1`.
     ///
     /// # Example
     /// ```
@@ -21,7 +33,7 @@ pub trait Mask {
     /// assert_eq!(value, 0b10011001);
     /// ```
     fn bit_mask(bits: &[u16]) -> Self;
-    /// Sets every bit to 1.
+    /// Creates a bit-mask where every (possible) bit is set to `1`.
     ///
     /// # Example
     /// ```
@@ -233,11 +245,14 @@ impl Mask for i64 {
     }
 }
 
+/// Type for describing the underlying byte-order.
 #[derive(Debug,PartialEq)]
 pub enum Endian {
-    /// Defines data to be in little-endian byte-order.
+    /// The byte-order is little-endian, or in other words, the least significant byte is stored
+    /// at the lowest memory address.
     Little,
-    /// Defines data to be in big-endian byte-order.
+    /// The byte-order is little-endian, or in other words, the most significant byte is stored
+    /// at the lowest memory address.
     Big
 }
 
