@@ -13,6 +13,9 @@ pub mod utils;
 #[cfg(feature = "decode")]
 pub mod decode;
 
+#[cfg(feature = "encode")]
+pub mod encode;
+
 #[cfg(feature = "prelude")]
 pub mod prelude;
 
