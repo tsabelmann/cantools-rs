@@ -344,345 +344,345 @@ impl TryDecode<f64> for Signed {
     }
 }
 
-#[derive(Debug,PartialEq)]
-pub struct Float32 {
-    start: u16,
-    factor: f32,
-    offset: f32,
-    endian: Endian
-}
-
-impl Float32 {
-    /// Constructs a new Float32 (f32) signal.
-    ///
-    /// # Example
-    /// ```
-    /// use cantools::signals::Float32;
-    /// use cantools::utils::Endian;
-    /// let sig = Float32::new(0, 42.0, 1337.0, Endian::Little);
-    /// ```
-    pub fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
-        Float32 {
-            start,
-            factor,
-            offset,
-            endian
-        }
-    }
-}
-
-impl Default for Float32 {
-    fn default() -> Self {
-        Float32 {
-            start: 0,
-            factor: 1f32,
-            offset: 0f32,
-            endian: Endian::Little
-        }
-    }
-}
-
-impl TryDecode<f32> for Float32 {
-    type Error = DataError;
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<f32, Self::Error> {
-        match &self.endian {
-            Endian::Little => {
-                if self.start + 32 > (8 * data.dlc() as u16) {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let bit_in_start_byte = self.start % 8;
-                let end_byte = (self.start + 32 - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[i] = 0;
-                        },
-                        Some(value) => {
-                            slice[i] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= bit_in_start_byte;
-                converted &= u64::mask(32, 0);
-                let converted = (converted as u32).to_le_bytes();
-
-                let mut result = f32::from_le_bytes(converted);
-                result *= &self.factor;
-                result += &self.offset;
-                Ok(result)
-            },
-            Endian::Big => {
-                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
-                let shift = (8 * data.dlc()) as isize - (shift as isize) - 32;
-                if shift < 0 {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let end_byte = 7 - (self.start % 8) + 8 * self.start.div(8);
-                let end_byte = (end_byte + 32 - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-
-                let min_data = min(8, s.len());
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[min_data-i-1] = 0;
-                        },
-                        Some(value) => {
-                            slice[min_data-i-1] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= 7 - (self.start % 8);
-                converted &= u64::mask(32, 0);
-                let converted = converted as u32;
-                let converted = converted.to_le_bytes();
-
-                let mut result = f32::from_le_bytes(converted);
-                result *= &self.factor;
-                result += &self.offset;
-                Ok(result)
-            }
-        }
-    }
-}
-
-#[derive(Debug,PartialEq)]
-pub struct Float64 {
-    start: u16,
-    factor: f64,
-    offset: f64,
-    endian: Endian
-}
-
-impl Float64 {
-    /// Constructs a new Float64 (f64) signal.
-    ///
-    /// # Example
-    /// ```
-    /// use cantools::signals::Float64;
-    /// use cantools::utils::Endian;
-    /// let sig = Float64::new(0, 42.0, 1337.0, Endian::Little);
-    /// ```
-    pub fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
-        Float64 {
-            start,
-            factor,
-            offset,
-            endian
-        }
-    }
-}
-
-impl Default for Float64 {
-    fn default() -> Self {
-        Float64 {
-            start: 0,
-            factor: 1f64,
-            offset: 0f64,
-            endian: Endian::Little
-        }
-    }
-}
-
-impl TryDecode<f64> for Float64 {
-    type Error = DataError;
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
-        match &self.endian {
-            Endian::Little => {
-                if self.start + 64 > (8 * data.dlc() as u16) {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let bit_in_start_byte = self.start % 8;
-                let end_byte = (self.start + 64 - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[i] = 0;
-                        },
-                        Some(value) => {
-                            slice[i] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= bit_in_start_byte;
-                converted &= u64::mask(64, 0);
-                let converted = converted.to_le_bytes();
-
-                let mut result = f64::from_le_bytes(converted);
-                result *= &self.factor;
-                result += &self.offset;
-                Ok(result)
-            },
-            Endian::Big => {
-                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
-                let shift = (8 * data.dlc()) as isize - (shift as isize) - 64;
-                if shift < 0 {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                let end_byte = (end_byte + 64 - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-
-                let min_data = min(8, s.len());
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[min_data-i-1] = 0;
-                        },
-                        Some(value) => {
-                            slice[min_data-i-1] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= 7 - self.start % 8;
-                converted &= u64::mask(64, 0);
-                let converted = converted.to_le_bytes();
-
-                let mut result = f64::from_le_bytes(converted);
-                result *= &self.factor;
-                result += &self.offset;
-                Ok(result)
-            }
-        }
-    }
-}
-
-#[derive(Debug,PartialEq)]
-pub struct Raw {
-    start: u16,
-    length: u16,
-    endian: Endian
-}
-
-impl Raw {
-    /// Constructs a new Raw signal.
-    ///
-    /// # Example
-    /// ```
-    /// use cantools::signals::Raw;
-    /// use cantools::utils::Endian;
-    /// let sig = Raw::new(42, 8, Endian::Little).unwrap();
-    /// ```
-    pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, LengthError> {
-        if length == 0 {
-            Err(LengthError::LengthZero)
-        } else if length > 64 {
-            Err(LengthError::LengthGreater64)
-        } else {
-            let var = Raw {
-                start,
-                length,
-                endian
-            };
-            Ok(var)
-        }
-    }
-}
-
-impl Default for Raw {
-    fn default() -> Self {
-        Raw {
-            start: 0,
-            length: 1,
-            endian: Endian::Little
-        }
-    }
-}
-
-impl TryDecode<u64> for Raw {
-    type Error = DataError;
-
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<u64, Self::Error> {
-        match &self.endian {
-            Endian::Little => {
-                if self.start + self.length > (8 * data.dlc() as u16) {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let bit_in_start_byte = self.start % 8;
-                let end_byte = (self.start + self.length - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[i] = 0;
-                        },
-                        Some(value) => {
-                            slice[i] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= bit_in_start_byte;
-                converted &= u64::mask(self.length, 0);
-                Ok(converted)
-            },
-            Endian::Big => {
-                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
-                let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
-                if shift < 0 {
-                    return Err(DataError::NotEnoughData);
-                }
-
-                let start_byte = self.start.div(8);
-                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                let end_byte = (end_byte + self.length - 1).div(8);
-
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                let s = start_byte..=end_byte;
-
-                let min_data = min(8, s.len());
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                    match data.data().get(byte_index as usize){
-                        None => {
-                            slice[min_data-i-1] = 0;
-                        },
-                        Some(value) => {
-                            slice[min_data-i-1] = *value;
-                        }
-                    }
-                }
-
-                let mut converted = u64::from_le_bytes(slice);
-                converted >>= 7 - self.start % 8;
-                converted &= u64::mask(self.length, 0);
-                Ok(converted)
-            }
-        }
-    }
-}
+// #[derive(Debug,PartialEq)]
+// pub struct Float32 {
+//     start: u16,
+//     factor: f32,
+//     offset: f32,
+//     endian: Endian
+// }
+//
+// impl Float32 {
+//     /// Constructs a new Float32 (f32) signal.
+//     ///
+//     /// # Example
+//     /// ```
+//     /// use cantools::signals::Float32;
+//     /// use cantools::utils::Endian;
+//     /// let sig = Float32::new(0, 42.0, 1337.0, Endian::Little);
+//     /// ```
+//     pub fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
+//         Float32 {
+//             start,
+//             factor,
+//             offset,
+//             endian
+//         }
+//     }
+// }
+//
+// impl Default for Float32 {
+//     fn default() -> Self {
+//         Float32 {
+//             start: 0,
+//             factor: 1f32,
+//             offset: 0f32,
+//             endian: Endian::Little
+//         }
+//     }
+// }
+//
+// impl TryDecode<f32> for Float32 {
+//     type Error = DataError;
+//     fn try_decode<D: CANData>(&self, data: &D) -> Result<f32, Self::Error> {
+//         match &self.endian {
+//             Endian::Little => {
+//                 if self.start + 32 > (8 * data.dlc() as u16) {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let bit_in_start_byte = self.start % 8;
+//                 let end_byte = (self.start + 32 - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[i] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[i] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= bit_in_start_byte;
+//                 converted &= u64::mask(32, 0);
+//                 let converted = (converted as u32).to_le_bytes();
+//
+//                 let mut result = f32::from_le_bytes(converted);
+//                 result *= &self.factor;
+//                 result += &self.offset;
+//                 Ok(result)
+//             },
+//             Endian::Big => {
+//                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+//                 let shift = (8 * data.dlc()) as isize - (shift as isize) - 32;
+//                 if shift < 0 {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let end_byte = 7 - (self.start % 8) + 8 * self.start.div(8);
+//                 let end_byte = (end_byte + 32 - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//
+//                 let min_data = min(8, s.len());
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[min_data-i-1] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[min_data-i-1] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= 7 - (self.start % 8);
+//                 converted &= u64::mask(32, 0);
+//                 let converted = converted as u32;
+//                 let converted = converted.to_le_bytes();
+//
+//                 let mut result = f32::from_le_bytes(converted);
+//                 result *= &self.factor;
+//                 result += &self.offset;
+//                 Ok(result)
+//             }
+//         }
+//     }
+// }
+//
+// #[derive(Debug,PartialEq)]
+// pub struct Float64 {
+//     start: u16,
+//     factor: f64,
+//     offset: f64,
+//     endian: Endian
+// }
+//
+// impl Float64 {
+//     /// Constructs a new Float64 (f64) signal.
+//     ///
+//     /// # Example
+//     /// ```
+//     /// use cantools::signals::Float64;
+//     /// use cantools::utils::Endian;
+//     /// let sig = Float64::new(0, 42.0, 1337.0, Endian::Little);
+//     /// ```
+//     pub fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
+//         Float64 {
+//             start,
+//             factor,
+//             offset,
+//             endian
+//         }
+//     }
+// }
+//
+// impl Default for Float64 {
+//     fn default() -> Self {
+//         Float64 {
+//             start: 0,
+//             factor: 1f64,
+//             offset: 0f64,
+//             endian: Endian::Little
+//         }
+//     }
+// }
+//
+// impl TryDecode<f64> for Float64 {
+//     type Error = DataError;
+//     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
+//         match &self.endian {
+//             Endian::Little => {
+//                 if self.start + 64 > (8 * data.dlc() as u16) {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let bit_in_start_byte = self.start % 8;
+//                 let end_byte = (self.start + 64 - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[i] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[i] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= bit_in_start_byte;
+//                 converted &= u64::mask(64, 0);
+//                 let converted = converted.to_le_bytes();
+//
+//                 let mut result = f64::from_le_bytes(converted);
+//                 result *= &self.factor;
+//                 result += &self.offset;
+//                 Ok(result)
+//             },
+//             Endian::Big => {
+//                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+//                 let shift = (8 * data.dlc()) as isize - (shift as isize) - 64;
+//                 if shift < 0 {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+//                 let end_byte = (end_byte + 64 - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//
+//                 let min_data = min(8, s.len());
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[min_data-i-1] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[min_data-i-1] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= 7 - self.start % 8;
+//                 converted &= u64::mask(64, 0);
+//                 let converted = converted.to_le_bytes();
+//
+//                 let mut result = f64::from_le_bytes(converted);
+//                 result *= &self.factor;
+//                 result += &self.offset;
+//                 Ok(result)
+//             }
+//         }
+//     }
+// }
+//
+// #[derive(Debug,PartialEq)]
+// pub struct Raw {
+//     start: u16,
+//     length: u16,
+//     endian: Endian
+// }
+//
+// impl Raw {
+//     /// Constructs a new Raw signal.
+//     ///
+//     /// # Example
+//     /// ```
+//     /// use cantools::signals::Raw;
+//     /// use cantools::utils::Endian;
+//     /// let sig = Raw::new(42, 8, Endian::Little).unwrap();
+//     /// ```
+//     pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, LengthError> {
+//         if length == 0 {
+//             Err(LengthError::LengthZero)
+//         } else if length > 64 {
+//             Err(LengthError::LengthGreater64)
+//         } else {
+//             let var = Raw {
+//                 start,
+//                 length,
+//                 endian
+//             };
+//             Ok(var)
+//         }
+//     }
+// }
+//
+// impl Default for Raw {
+//     fn default() -> Self {
+//         Raw {
+//             start: 0,
+//             length: 1,
+//             endian: Endian::Little
+//         }
+//     }
+// }
+//
+// impl TryDecode<u64> for Raw {
+//     type Error = DataError;
+//
+//     fn try_decode<D: CANData>(&self, data: &D) -> Result<u64, Self::Error> {
+//         match &self.endian {
+//             Endian::Little => {
+//                 if self.start + self.length > (8 * data.dlc() as u16) {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let bit_in_start_byte = self.start % 8;
+//                 let end_byte = (self.start + self.length - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[i] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[i] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= bit_in_start_byte;
+//                 converted &= u64::mask(self.length, 0);
+//                 Ok(converted)
+//             },
+//             Endian::Big => {
+//                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+//                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
+//                 if shift < 0 {
+//                     return Err(DataError::NotEnoughData);
+//                 }
+//
+//                 let start_byte = self.start.div(8);
+//                 let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+//                 let end_byte = (end_byte + self.length - 1).div(8);
+//
+//                 let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+//                 let s = start_byte..=end_byte;
+//
+//                 let min_data = min(8, s.len());
+//                 for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+//                     match data.data().get(byte_index as usize){
+//                         None => {
+//                             slice[min_data-i-1] = 0;
+//                         },
+//                         Some(value) => {
+//                             slice[min_data-i-1] = *value;
+//                         }
+//                     }
+//                 }
+//
+//                 let mut converted = u64::from_le_bytes(slice);
+//                 converted >>= 7 - self.start % 8;
+//                 converted &= u64::mask(self.length, 0);
+//                 Ok(converted)
+//             }
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -690,7 +690,8 @@ mod tests {
     use crate::decode::TryDecode;
     use crate::encode::{EncodeError, TryEncode, Encode};
     use crate::utils::{Endian, Mask};
-    use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
+    // use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
+    use crate::signals::{Bit, Unsigned, DataError, Signed};
 
     #[test]
     fn test_unsigned_001() {
@@ -963,81 +964,81 @@ mod tests {
         assert_eq!(decode, Result::Err(DataError::NotEnoughData));
     }
 
-    #[test]
-    fn test_decode_raw_001() {
-        let sig = Raw::new(0, 8, Endian::Little).unwrap();
-        let data = [0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode.unwrap(), 0b0000_1111);
-    }
-
-    #[test]
-    fn test_decode_raw_002() {
-        let sig = Raw::new(4, 8, Endian::Little).unwrap();
-        let data = [0b0000_1111, 0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode.unwrap(), 0b1111_0000);
-    }
-
-    #[test]
-    fn test_decode_raw_003() {
-        let sig = Raw::new(7, 8, Endian::Big).unwrap();
-        let data = [0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode, Result::Ok(0b0000_1111));
-    }
-
-    #[test]
-    fn test_decode_raw_004() {
-        let sig = Raw::new(3, 8, Endian::Big).unwrap();
-        let data = [0b0000_1111, 0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode, Result::Ok(0b1111_0000));
-    }
-
-    #[test]
-    fn test_decode_raw_005() {
-        let sig = Raw::new(1, 8, Endian::Little).unwrap();
-        let data = [0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
-    }
-
-    #[test]
-    fn test_decode_raw_006() {
-        let sig = Raw::new(6, 8, Endian::Big).unwrap();
-        let data = [0b0000_1111];
-
-        let decode = sig.try_decode(&data);
-        println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
-    }
-
-    #[test]
-    fn test_decode_float32_001() {
-        let sig = Float32::new(0, 1.0, 0.0,Endian::Little);
-        let data = [1, 2, 3, 4, 5, 6, 7, 8];
-
-        let decode = sig.try_decode(&data);
-        assert_eq!(decode, Result::Ok(f32::from_le_bytes([1, 2, 3, 4])));
-    }
-
-    #[test]
-    fn test_decode_float32_002() {
-        let sig = Float32::new(7, 1.0, 0.0,Endian::Big);
-        let data = [1, 2, 3, 4, 5, 6, 7, 8];
-
-        let decode = sig.try_decode(&data);
-        assert_eq!(decode, Result::Ok(f32::from_be_bytes([1, 2, 3, 4])));
-    }
+    // #[test]
+    // fn test_decode_raw_001() {
+    //     let sig = Raw::new(0, 8, Endian::Little).unwrap();
+    //     let data = [0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode.unwrap(), 0b0000_1111);
+    // }
+    //
+    // #[test]
+    // fn test_decode_raw_002() {
+    //     let sig = Raw::new(4, 8, Endian::Little).unwrap();
+    //     let data = [0b0000_1111, 0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode.unwrap(), 0b1111_0000);
+    // }
+    //
+    // #[test]
+    // fn test_decode_raw_003() {
+    //     let sig = Raw::new(7, 8, Endian::Big).unwrap();
+    //     let data = [0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode, Result::Ok(0b0000_1111));
+    // }
+    //
+    // #[test]
+    // fn test_decode_raw_004() {
+    //     let sig = Raw::new(3, 8, Endian::Big).unwrap();
+    //     let data = [0b0000_1111, 0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode, Result::Ok(0b1111_0000));
+    // }
+    //
+    // #[test]
+    // fn test_decode_raw_005() {
+    //     let sig = Raw::new(1, 8, Endian::Little).unwrap();
+    //     let data = [0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+    // }
+    //
+    // #[test]
+    // fn test_decode_raw_006() {
+    //     let sig = Raw::new(6, 8, Endian::Big).unwrap();
+    //     let data = [0b0000_1111];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     println!("{:?}", &decode);
+    //     assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+    // }
+    //
+    // #[test]
+    // fn test_decode_float32_001() {
+    //     let sig = Float32::new(0, 1.0, 0.0,Endian::Little);
+    //     let data = [1, 2, 3, 4, 5, 6, 7, 8];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     assert_eq!(decode, Result::Ok(f32::from_le_bytes([1, 2, 3, 4])));
+    // }
+    //
+    // #[test]
+    // fn test_decode_float32_002() {
+    //     let sig = Float32::new(7, 1.0, 0.0,Endian::Big);
+    //     let data = [1, 2, 3, 4, 5, 6, 7, 8];
+    //
+    //     let decode = sig.try_decode(&data);
+    //     assert_eq!(decode, Result::Ok(f32::from_be_bytes([1, 2, 3, 4])));
+    // }
 }
