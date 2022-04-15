@@ -15,7 +15,8 @@ readme = "README.md"
 [dependencies]
 
 [features]
-default = ["signals", "decode"]
+default = ["signals", "decode", "encode"]
 decode = []
+encode = []
 signals = []
 prelude = []
