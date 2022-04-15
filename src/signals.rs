@@ -1,8 +1,10 @@
 use std::cmp::min;
 use std::ops::Div;
 use crate::utils::{Mask, Endian};
-use crate::data::CANData;
-use crate::decode::{TryDecode};
+use crate::data::{CANData, CANWrite};
+use crate::decode::TryDecode;
+use crate::encode::{TryEncode, EncodeError, Encode};
+
 
 #[derive(Debug,PartialEq)]
 pub enum LengthError {
@@ -60,6 +62,32 @@ impl TryDecode<bool> for Bit {
     }
 }
 
+impl TryEncode<bool> for Bit {
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: bool) -> Result<(), EncodeError> {
+        let start_bit_in_byte = self.start % 8;
+        let start_byte = self.start.div(8);
+
+        if start_byte as usize >= data.dlc() {
+            return Err(EncodeError::UnavailableByte(start_byte as u8));
+        }
+
+        match value {
+            true => {
+                let mask_byte = u8::mask(1, start_bit_in_byte);
+                data.mut_data()[start_byte as usize] |= mask_byte;
+            },
+            false => {
+                let mask_byte = !u8::mask(1, start_bit_in_byte);
+                data.mut_data()[start_byte as usize] &= mask_byte;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Encode<bool> for Bit {}
+
 #[derive(Debug,PartialEq)]
 pub struct Unsigned {
     start: u16,
@@ -116,69 +144,69 @@ impl TryDecode<f64> for Unsigned {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let bit_in_start_byte = self.start % 8;
-                    let end_byte = (self.start + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let bit_in_start_byte = self.start % 8;
+                let end_byte = (self.start + self.length - 1).div(8);
 
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[i] = 0;
-                            },
-                            Some(value) => {
-                                slice[i] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[i] = 0;
+                        },
+                        Some(value) => {
+                            slice[i] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= bit_in_start_byte;
-                    converted &= u64::mask(self.length, 0);
-
-                    let mut result = converted as f64;
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= bit_in_start_byte;
+                converted &= u64::mask(self.length, 0);
+
+                let mut result = converted as f64;
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                let end_byte = (end_byte + self.length - 1).div(8);
 
-                    let min_data = min(8, s.len());
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[min_data-i-1] = 0;
-                            },
-                            Some(value) => {
-                                slice[min_data-i-1] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                let min_data = min(8, s.len());
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[min_data-i-1] = 0;
+                        },
+                        Some(value) => {
+                            slice[min_data-i-1] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= 7 - (self.start % 8);
-                    converted &= u64::mask(self.length, 0);
-                    let mut result = converted as f64;
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= 7 - (self.start % 8);
+                converted &= u64::mask(self.length, 0);
+                let mut result = converted as f64;
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             }
         }
     }
@@ -240,77 +268,77 @@ impl TryDecode<f64> for Signed {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let bit_in_start_byte = self.start % 8;
-                    let end_byte = (self.start + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[i] = 0;
-                            },
-                            Some(value) => {
-                                slice[i] = *value;
-                            }
+                let start_byte = self.start.div(8);
+                let bit_in_start_byte = self.start % 8;
+                let end_byte = (self.start + self.length - 1).div(8);
+
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[i] = 0;
+                        },
+                        Some(value) => {
+                            slice[i] = *value;
                         }
                     }
-
-                    let mut converted = i64::from_le_bytes(slice);
-                    converted >>= bit_in_start_byte;
-                    converted &= i64::mask(self.length, 0);
-
-                    if converted & i64::mask(1, self.length - 1) != 0 {
-                        converted += !i64::mask(self.length, 0);
-                    }
-
-                    let mut result = converted as f64;
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = i64::from_le_bytes(slice);
+                converted >>= bit_in_start_byte;
+                converted &= i64::mask(self.length, 0);
+
+                if converted & i64::mask(1, self.length - 1) != 0 {
+                    converted += !i64::mask(self.length, 0);
+                }
+
+                let mut result = converted as f64;
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                let end_byte = (end_byte + self.length - 1).div(8);
 
-                    let min_data = min(8, s.len());
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[min_data-i-1] = 0;
-                            },
-                            Some(value) => {
-                                slice[min_data-i-1] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                let min_data = min(8, s.len());
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[min_data-i-1] = 0;
+                        },
+                        Some(value) => {
+                            slice[min_data-i-1] = *value;
                         }
                     }
-
-                    let mut converted = i64::from_le_bytes(slice);
-                    converted >>= 7 - self.start % 8;
-                    converted &= i64::mask(self.length, 0);
-
-                    if converted & i64::mask(1, self.length - 1) != 0 {
-                        converted += !i64::mask(self.length, 0);
-                    }
-
-                    let mut result = converted as f64;
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = i64::from_le_bytes(slice);
+                converted >>= 7 - self.start % 8;
+                converted &= i64::mask(self.length, 0);
+
+                if converted & i64::mask(1, self.length - 1) != 0 {
+                    converted += !i64::mask(self.length, 0);
+                }
+
+                let mut result = converted as f64;
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             }
         }
     }
@@ -360,72 +388,72 @@ impl TryDecode<f32> for Float32 {
         match &self.endian {
             Endian::Little => {
                 if self.start + 32 > (8 * data.dlc() as u16) {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let bit_in_start_byte = self.start % 8;
-                    let end_byte = (self.start + 32 - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[i] = 0;
-                            },
-                            Some(value) => {
-                                slice[i] = *value;
-                            }
+                let start_byte = self.start.div(8);
+                let bit_in_start_byte = self.start % 8;
+                let end_byte = (self.start + 32 - 1).div(8);
+
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[i] = 0;
+                        },
+                        Some(value) => {
+                            slice[i] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= bit_in_start_byte;
-                    converted &= u64::mask(32, 0);
-                    let converted = (converted as u32).to_le_bytes();
-
-                    let mut result = f32::from_le_bytes(converted);
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= bit_in_start_byte;
+                converted &= u64::mask(32, 0);
+                let converted = (converted as u32).to_le_bytes();
+
+                let mut result = f32::from_le_bytes(converted);
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - 32;
                 if shift < 0 {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let end_byte = 7 - (self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + 32 - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let end_byte = 7 - (self.start % 8) + 8 * self.start.div(8);
+                let end_byte = (end_byte + 32 - 1).div(8);
 
-                    let min_data = min(8, s.len());
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[min_data-i-1] = 0;
-                            },
-                            Some(value) => {
-                                slice[min_data-i-1] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                let min_data = min(8, s.len());
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[min_data-i-1] = 0;
+                        },
+                        Some(value) => {
+                            slice[min_data-i-1] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= 7 - (self.start % 8);
-                    converted &= u64::mask(32, 0);
-                    let converted = converted as u32;
-                    let converted = converted.to_le_bytes();
-
-                    let mut result = f32::from_le_bytes(converted);
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= 7 - (self.start % 8);
+                converted &= u64::mask(32, 0);
+                let converted = converted as u32;
+                let converted = converted.to_le_bytes();
+
+                let mut result = f32::from_le_bytes(converted);
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             }
         }
     }
@@ -475,72 +503,72 @@ impl TryDecode<f64> for Float64 {
         match &self.endian {
             Endian::Little => {
                 if self.start + 64 > (8 * data.dlc() as u16) {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let bit_in_start_byte = self.start % 8;
-                    let end_byte = (self.start + 64 - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let bit_in_start_byte = self.start % 8;
+                let end_byte = (self.start + 64 - 1).div(8);
 
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[i] = 0;
-                            },
-                            Some(value) => {
-                                slice[i] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[i] = 0;
+                        },
+                        Some(value) => {
+                            slice[i] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= bit_in_start_byte;
-                    converted &= u64::mask(64, 0);
-                    let converted = converted.to_le_bytes();
-
-                    let mut result = f64::from_le_bytes(converted);
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= bit_in_start_byte;
+                converted &= u64::mask(64, 0);
+                let converted = converted.to_le_bytes();
+
+                let mut result = f64::from_le_bytes(converted);
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - 64;
                 if shift < 0 {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + 64 - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                let end_byte = (end_byte + 64 - 1).div(8);
 
-                    let min_data = min(8, s.len());
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[min_data-i-1] = 0;
-                            },
-                            Some(value) => {
-                                slice[min_data-i-1] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                let min_data = min(8, s.len());
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[min_data-i-1] = 0;
+                        },
+                        Some(value) => {
+                            slice[min_data-i-1] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= 7 - self.start % 8;
-                    converted &= u64::mask(64, 0);
-                    let converted = converted.to_le_bytes();
-
-                    let mut result = f64::from_le_bytes(converted);
-                    result *= &self.factor;
-                    result += &self.offset;
-                    Ok(result)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= 7 - self.start % 8;
+                converted &= u64::mask(64, 0);
+                let converted = converted.to_le_bytes();
+
+                let mut result = f64::from_le_bytes(converted);
+                result *= &self.factor;
+                result += &self.offset;
+                Ok(result)
             }
         }
     }
@@ -595,62 +623,62 @@ impl TryDecode<u64> for Raw {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let bit_in_start_byte = self.start % 8;
-                    let end_byte = (self.start + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let bit_in_start_byte = self.start % 8;
+                let end_byte = (self.start + self.length - 1).div(8);
 
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[i] = 0;
-                            },
-                            Some(value) => {
-                                slice[i] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[i] = 0;
+                        },
+                        Some(value) => {
+                            slice[i] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= bit_in_start_byte;
-                    converted &= u64::mask(self.length, 0);
-                    Ok(converted)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= bit_in_start_byte;
+                converted &= u64::mask(self.length, 0);
+                Ok(converted)
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    Err(DataError::NotEnoughData)
-                } else {
-                    let start_byte = self.start.div(8);
-                    let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
-                    let end_byte = (end_byte + self.length - 1).div(8);
+                    return Err(DataError::NotEnoughData);
+                }
 
-                    let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
-                    let s = start_byte..=end_byte;
+                let start_byte = self.start.div(8);
+                let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
+                let end_byte = (end_byte + self.length - 1).div(8);
 
-                    let min_data = min(8, s.len());
-                    for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                        match data.data().get(byte_index as usize){
-                            None => {
-                                slice[min_data-i-1] = 0;
-                            },
-                            Some(value) => {
-                                slice[min_data-i-1] = *value;
-                            }
+                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let s = start_byte..=end_byte;
+
+                let min_data = min(8, s.len());
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
+                    match data.data().get(byte_index as usize){
+                        None => {
+                            slice[min_data-i-1] = 0;
+                        },
+                        Some(value) => {
+                            slice[min_data-i-1] = *value;
                         }
                     }
-
-                    let mut converted = u64::from_le_bytes(slice);
-                    converted >>= 7 - self.start % 8;
-                    converted &= u64::mask(self.length, 0);
-                    Ok(converted)
                 }
+
+                let mut converted = u64::from_le_bytes(slice);
+                converted >>= 7 - self.start % 8;
+                converted &= u64::mask(self.length, 0);
+                Ok(converted)
             }
         }
     }
@@ -658,7 +686,9 @@ impl TryDecode<u64> for Raw {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Div;
     use crate::decode::TryDecode;
+    use crate::encode::{EncodeError, TryEncode, Encode};
     use crate::utils::{Endian, Mask};
     use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
 
@@ -705,6 +735,81 @@ mod tests {
             let data = [u8::mask(1, i)];
             let decode = bit.try_decode(&data);
             assert_eq!(decode, Result::Ok(true));
+        }
+    }
+
+    /* TEST ENCODE BIT */
+
+    #[test]
+    fn test_encode_bit_001() {
+        for i in 0..8 {
+            let bit = Bit::new(i);
+            let data = [u8::mask(1, i)];
+            let mut data_to_encode = [0u8];
+            let result = bit.try_encode(&mut data_to_encode, true);
+
+            assert_eq!(result, Ok(()));
+            assert_eq!(data, data_to_encode);
+        }
+    }
+
+    #[test]
+    fn test_encode_bit_002() {
+        for i in 0..8 {
+            let bit = Bit::new(i);
+            let data = [u8::mask(1, i)];
+            let mut data_to_encode = [0u8];
+            Encode::encode(&bit,&mut data_to_encode, true);
+
+            assert_eq!(data, data_to_encode);
+        }
+    }
+
+    #[test]
+    fn test_encode_bit_003() {
+        for i in 0..8 {
+            let bit = Bit::new(i);
+            let data = [!u8::mask(1, i)];
+            let mut data_to_encode = [0xFFu8];
+            let result = bit.try_encode(&mut data_to_encode, false);
+
+            assert_eq!(result, Ok(()));
+            assert_eq!(data, data_to_encode);
+        }
+    }
+
+    #[test]
+    fn test_encode_bit_004() {
+        for i in 0..8 {
+            let bit = Bit::new(i);
+            let data = [!u8::mask(1, i)];
+            let mut data_to_encode = [0xFFu8];
+            let result = bit.try_encode(&mut data_to_encode, false);
+
+            assert_eq!(result, Ok(()));
+            assert_eq!(data, data_to_encode);
+        }
+    }
+
+    #[test]
+    fn test_encode_bit_005() {
+        for i in 8..64 {
+            let bit = Bit::new(i);
+            let mut data_to_encode = [0xFFu8];
+            let result = bit.try_encode(&mut data_to_encode, false);
+
+            assert!(result.is_err());
+            assert_eq!(result, Err(EncodeError::UnavailableByte(i.div(8) as u8)))
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_encode_bit_006() {
+        for i in 8..64 {
+            let bit = Bit::new(i);
+            let mut data_to_encode = [0xFFu8];
+            bit.encode(&mut data_to_encode, false);
         }
     }
 
