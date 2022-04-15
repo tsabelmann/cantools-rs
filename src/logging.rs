@@ -1,4 +1,6 @@
-use std::fmt::format;
+//! Module contains logfile types used to access the underlying CAN-bus data.
+
+
 use crate::data::CANData;
 use std::path::{Path};
 use std::iter::{Iterator, IntoIterator};
@@ -8,7 +10,19 @@ use std::io::{BufReader, BufRead, Lines};
 use std::str::FromStr;
 use std::ops::Div;
 
-
+///
+///
+/// # Format
+/// ```bash
+/// can0 00000042 [0]
+/// can0 1FF [1] 01
+/// vcan0 00001337 [8] 01 02 03 04 05 06 07 08
+/// ```
+/// # Example
+/// ```no_run
+/// use cantools::logging::CANDump;
+/// let file = CANDump::open("raw_file");
+/// ```
 pub struct CANDump {
     file: File
 }
@@ -29,6 +43,7 @@ impl CANDump {
 
 #[derive(Debug, PartialEq)]
 pub struct CANDumpEntry {
+
     interface: String,
     can_id: u32,
     data: Vec<u8>
@@ -43,12 +58,17 @@ impl CANData for CANDumpEntry {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CANDumpEntryConstructionError {
+    EmptyInterface
+}
+
 impl CANDumpEntry {
-    pub fn new(interface: &str, can_id:u32, data: Vec<u8>) -> Self {
-        CANDumpEntry {
-            interface: String::from(interface),
-            can_id,
-            data
+    pub fn new(interface: &str, can_id:u32, data: Vec<u8>) -> Result<Self, CANDumpEntryConstructionError> {
+        if interface.is_empty() {
+            Err(CANDumpEntryConstructionError::EmptyInterface)
+        } else {
+            Ok(CANDumpEntry { interface: String::from(interface), can_id, data })
         }
     }
 }
@@ -62,7 +82,7 @@ pub enum CANDumpEntryParseError {
     ParseCanIdError,
     ParseCanDataError,
     DlcDataMismatch,
-    Unspecified
+    ConstructionError(CANDumpEntryConstructionError)
 }
 
 impl FromStr for CANDumpEntry {
@@ -106,7 +126,10 @@ impl FromStr for CANDumpEntry {
             return Err(CANDumpEntryParseError::DlcDataMismatch);
         }
 
-        Ok(CANDumpEntry::new(interface, can_id, data))
+        match CANDumpEntry::new(interface, can_id, data) {
+            Ok(entry) => Ok(entry),
+            Err(err) => Err(CANDumpEntryParseError::ConstructionError(err))
+        }
     }
 }
 
@@ -185,15 +208,35 @@ pub struct CANDumpLogEntry {
     flag: Option<u8>
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CANDumpLogEntryConstructionError {
+    InvalidTimestamp,
+    EmptyInterface,
+    InvalidFlagValue
+}
+
 impl CANDumpLogEntry {
-    pub fn new(timestamp: f64, interface: &str, can_id:u32, data: Vec<u8>, flag: Option<u8>) -> Self {
-        CANDumpLogEntry {
-            timestamp,
-            interface: String::from(interface),
-            can_id,
-            data,
-            flag
+    pub fn new(timestamp: f64,
+               interface: &str,
+               can_id:u32,
+               data: Vec<u8>,
+               flag: Option<u8>) -> Result<Self, CANDumpLogEntryConstructionError> {
+
+        if timestamp.is_nan() || timestamp.is_infinite() {
+            return Err(CANDumpLogEntryConstructionError::InvalidTimestamp);
         }
+
+        if interface.is_empty() {
+            return Err(CANDumpLogEntryConstructionError::EmptyInterface);
+        }
+
+        if let Some(x) = flag {
+             if x > 0x0F {
+                return Err(CANDumpLogEntryConstructionError::InvalidFlagValue);
+            };
+        }
+
+        Ok(CANDumpLogEntry { timestamp, interface: String::from(interface), can_id, data, flag })
     }
 }
 
@@ -209,6 +252,7 @@ pub enum CANDumpLogEntryParseError {
     ParseCanIdError,
     ParseCanDataError,
     ParseFlagError,
+    ConstructionError(CANDumpLogEntryConstructionError),
     Unspecified
 }
 
@@ -267,7 +311,12 @@ impl FromStr for CANDumpLogEntry {
                     };
                 }
 
-                Ok(CANDumpLogEntry::new(timestamp, interface, can_id, data, None))
+                match CANDumpLogEntry::new(timestamp, interface, can_id, data, None) {
+                    Ok(entry) => Ok(entry),
+                    Err(err) => {
+                        Err(CANDumpLogEntryParseError::ConstructionError(err))
+                    }
+                }
             },
             3 => {
                 let can_id_string = match can_data_splits.get(0).copied() {
@@ -303,7 +352,12 @@ impl FromStr for CANDumpLogEntry {
                     };
                 }
 
-                Ok(CANDumpLogEntry::new(timestamp, interface, can_id, data, Some(flag)))
+                match CANDumpLogEntry::new(timestamp, interface, can_id, data, Some(flag)) {
+                    Ok(entry) => Ok(entry),
+                    Err(err) => {
+                        Err(CANDumpLogEntryParseError::ConstructionError(err))
+                    }
+                }
             },
             _ => Err(CANDumpLogEntryParseError::Unspecified)
         }
