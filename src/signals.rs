@@ -74,8 +74,8 @@ impl Unsigned {
     ///
     /// # Example
     /// ```
-    /// use cantools::signals::{Unsigned};
-    /// use cantools::endian::Endian;
+    /// use cantools::signals::Unsigned;
+    /// use cantools::utils::Endian;
     /// let sig = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16,
@@ -199,7 +199,7 @@ impl Signed {
     /// # Example
     /// ```
     /// use cantools::signals::Signed;
-    /// use cantools::endian::Endian;
+    /// use cantools::utils::Endian;
     /// let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16,
@@ -330,7 +330,7 @@ impl Float32 {
     /// # Example
     /// ```
     /// use cantools::signals::Float32;
-    /// use cantools::endian::Endian;
+    /// use cantools::utils::Endian;
     /// let sig = Float32::new(0, 42.0, 1337.0, Endian::Little);
     /// ```
     pub fn new(start: u16, factor: f32, offset: f32, endian: Endian) -> Self {
@@ -445,7 +445,7 @@ impl Float64 {
     /// # Example
     /// ```
     /// use cantools::signals::Float64;
-    /// use cantools::endian::Endian;
+    /// use cantools::utils::Endian;
     /// let sig = Float64::new(0, 42.0, 1337.0, Endian::Little);
     /// ```
     pub fn new(start: u16, factor: f64, offset: f64, endian: Endian) -> Self {
@@ -559,7 +559,7 @@ impl Raw {
     /// # Example
     /// ```
     /// use cantools::signals::Raw;
-    /// use cantools::endian::Endian;
+    /// use cantools::utils::Endian;
     /// let sig = Raw::new(42, 8, Endian::Little).unwrap();
     /// ```
     pub fn new(start: u16, length: u16, endian: Endian) -> Result<Raw, LengthError> {
@@ -659,8 +659,7 @@ impl TryDecode<u64> for Raw {
 #[cfg(test)]
 mod tests {
     use crate::decode::TryDecode;
-    use crate::endian::Endian;
-    use crate::mask::Mask;
+    use crate::utils::{Endian, Mask};
     use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
 
     #[test]
@@ -701,7 +700,6 @@ mod tests {
 
     #[test]
     fn test_decode_bit_003() {
-
         for i in 0..8 {
             let bit = Bit::new(i);
             let data = [u8::mask(1, i)];
