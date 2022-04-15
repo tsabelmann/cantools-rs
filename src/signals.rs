@@ -1,8 +1,7 @@
 use std::cmp::min;
 use std::ops::Div;
-use crate::mask::Mask;
+use crate::utils::{Mask, Endian};
 use crate::data::CANData;
-use crate::endian::Endian;
 use crate::decode::{TryDecode};
 
 #[derive(Debug,PartialEq)]
