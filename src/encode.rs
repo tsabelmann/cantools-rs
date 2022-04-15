@@ -27,4 +27,3 @@ pub trait Encode<T>: TryEncode<T> {
         }
     }
 }
-
