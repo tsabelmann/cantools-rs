@@ -1,11 +1,11 @@
-use cantools::logs::CANDumpLog;
+use cantools::logging::{CANDumpLog};
 use std::time::Instant;
 
 fn main() {
     let candump = CANDumpLog::open("candump/testdump_3.log").unwrap();
 
     let now = Instant::now();
-    for l in candump {
+    for _l in candump {
         // println!("{:?}", l);
     }
     let duration = now.elapsed();
