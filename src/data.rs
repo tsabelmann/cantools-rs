@@ -30,18 +30,21 @@ pub trait CANWrite: CANData {
     /// Returns a mutable slice representing the mutable data.
     fn mut_data(&mut self) -> &mut [u8];
 
-    /// Retrieved the byte and `index` ans sets it to the value `value`. If the byte at `index` is
+    /// Retrieves the byte and `index` and sets it to the value `value`. If the byte at `index` is
     /// unavailable, a [CANWriteError] is returned.
-    fn set_and_exchange(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
+    fn set(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
 
-    /// Retrieved the byte and `index` and sets it to the value `value`. Uses
-    /// [set_and_exchange](CANWrite::set_and_exchange) underneath.
-    ///
-    /// # Panics
-    /// If the byte at `index` is unavailable or non existent, the method panics.
-    fn set(&mut self, value: u8, index: u8) -> u8 {
-        self.set_and_exchange(value, index).unwrap()
-    }
+    /// Retrieves the byte and `index` and sets the byte to the disjunction of the former value and
+    /// `value`. If the byte at `index` is unavailable, a [CANWriteError] is returned.
+    fn or(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
+
+    /// Retrieves the byte and `index` and sets the byte to the conjunction of the former value and
+    /// `value`. If the byte at `index` is unavailable, a [CANWriteError] is returned.
+    fn and(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
+
+    /// Retrieves the byte and `index` and sets the byte to its bit-wise inverse. If the byte at
+    /// `index` is unavailable, a [CANWriteError] is returned.
+    fn not(&mut self, index: u8) -> Result<u8, CANWriteError>;
 }
 
 impl CANData for Vec<u8> {
