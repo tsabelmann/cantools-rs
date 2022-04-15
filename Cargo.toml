@@ -17,7 +17,5 @@ readme = "README.md"
 [features]
 default = ["signals", "decode"]
 decode = []
-encode = []
 signals = []
-peak = []
 prelude = []
