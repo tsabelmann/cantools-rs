@@ -4,9 +4,19 @@
 
 use crate::data::CANData;
 
+///
+#[derive(Debug, PartialEq)]
+pub enum DecodeError {
+    ///
+    NotEnoughData
+}
+
+///
 pub trait TryDecode<T> {
+    ///
     type Error;
 
+    ///
     fn try_decode<D: CANData>(&self, data: &D) -> Result<T, Self::Error>;
 }
 
