@@ -250,6 +250,51 @@ impl TryDecode<f64> for Unsigned {
     }
 }
 
+impl TryEncode<f64> for Unsigned {
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: f64) -> Result<(), EncodeError> {
+        if value < self.min() || value > self.max() {
+            return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+        }
+
+        match self.endian {
+            Endian::Little => {
+                if self.start + self.length > (8 * data.dlc() as u16) {
+                    return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+                }
+
+                // compute corresponding bytes that are effected by setting
+                let start_byte = self.start.div(8);
+                let end_byte = (self.start + self.length - 1).div(8);
+                let s = start_byte..=end_byte;
+
+                // reset data by setting the bits to zero
+                let reset_mask = !u64::mask(self.length, self.start);
+                let bytes = reset_mask.to_le_bytes();
+
+                // compute integer value to be set
+                let value = value - self.offset;
+                let value = value / self.factor;
+                let value = value.trunc() as u64;
+                let value = value & u64::mask(self.length, 0);
+
+                // set data by setting the corresponding data bits
+
+            },
+            Endian::Big => {
+                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+                let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
+                if shift < 0 {
+                    return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+                }
+
+            }
+        }
+
+        Ok(())
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
 pub struct Signed {
     start: u16,
