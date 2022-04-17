@@ -8,13 +8,19 @@ use crate::data::CANWrite;
 #[derive(Debug, PartialEq)]
 pub enum EncodeError {
     ///
-    UnavailableByte(u8)
+    NotEnoughData,
+    ///
+    MinError,
+    ///
+    MaxError
 }
 
 ///
 pub trait TryEncode<T> {
     ///
-    fn try_encode<D: CANWrite>(&self, data: &mut D, value: T) -> Result<(), EncodeError>;
+    type Error;
+    ///
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: T) -> Result<(), Self::Error>;
 }
 
 ///
