@@ -302,21 +302,17 @@ impl TryEncode<f64> for Unsigned {
                 let mut value = value.trunc() as u64;
 
                 value &= u64::mask(self.length, 0);
-                value = value.reverse_bits() >> (64 - self.length);
 
                 // set data by setting the corresponding data bits
                 let mut start = self.start;
-                for _i in 0..self.length {
+                for i in 0..self.length {
                     let bit = Bit::new(start);
 
-                    if value & 1 == 0 {
+                    if (value >> (self.length - 1 - i)) & 1 == 0 {
                         bit.try_encode(data, false).unwrap();
                     } else {
                         bit.try_encode(data, true).unwrap();
                     }
-
-                    // adjust value to retrieve the next bit in the next iteration
-                    value >>= 1;
 
                     // update start to be the next bit to set
                     start = if start % 8 == 0 {
@@ -551,21 +547,17 @@ impl TryEncode<f64> for Signed {
                 };
 
                 value &= i64::mask(self.length, 0);
-                value = value.reverse_bits() >> (64 - self.length);
 
                 // set data by setting the corresponding data bits
                 let mut start = self.start;
-                for _i in 0..self.length {
+                for i in 0..self.length {
                     let bit = Bit::new(start);
 
-                    if value & 1 == 0 {
+                    if (value >> (self.length - 1 - i)) & 1 == 0 {
                         bit.try_encode(data, false).unwrap();
                     } else {
                         bit.try_encode(data, true).unwrap();
                     }
-
-                    // adjust value to retrieve the next bit in the next iteration
-                    value >>= 1;
 
                     // update start to be the next bit to set
                     start = if start % 8 == 0 {
@@ -580,6 +572,8 @@ impl TryEncode<f64> for Signed {
         Ok(())
     }
 }
+
+impl Encode<f64> for Signed {}
 
 
 // #[derive(Debug,PartialEq)]
