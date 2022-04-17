@@ -17,6 +17,24 @@ pub enum DataError {
     NotEnoughData
 }
 
+///
+pub trait Min {
+    type Item;
+
+    ///
+    fn min(&self) -> Self::Item;
+}
+
+///
+pub trait Max {
+    ///
+    type Item;
+
+    ///
+    fn max(&self) -> Self::Item;
+}
+
+
 #[derive(Debug,Default,PartialEq)]
 pub struct Bit {
     start: u16
@@ -136,6 +154,26 @@ impl Default for Unsigned {
         }
     }
 }
+
+impl Min for Unsigned {
+    type Item = f64;
+
+    fn min(&self) -> Self::Item {
+        self.offset
+    }
+}
+
+impl Max for Unsigned {
+    type Item = f64;
+
+    fn max(&self) -> Self::Item {
+        let mut base = u64::mask(self.length, 0) as f64;
+        base *= self.factor;
+        base += self.offset;
+        base
+    }
+}
+
 
 impl TryDecode<f64> for Unsigned {
     type Error = DataError;
@@ -258,6 +296,28 @@ impl Default for Signed {
             offset: 0.0,
             endian: Endian::Little
         }
+    }
+}
+
+impl Min for Signed {
+    type Item = f64;
+
+    fn min(&self) -> Self::Item {
+        let mut base = i64::mask(64 - self.length + 1 , self.length - 1) as f64;
+        base *= self.factor;
+        base += self.offset;
+        base
+    }
+}
+
+impl Max for Signed {
+    type Item = f64;
+
+    fn max(&self) -> Self::Item {
+        let mut base = u64::mask(self.length - 1, 0) as f64;
+        base *= self.factor;
+        base += self.offset;
+        base
     }
 }
 
@@ -691,7 +751,7 @@ mod tests {
     use crate::encode::{EncodeError, TryEncode, Encode};
     use crate::utils::{Endian, Mask};
     // use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
-    use crate::signals::{Bit, Unsigned, DataError, Signed};
+    use crate::signals::{Bit, Unsigned, DataError, Signed, Min, Max};
 
     #[test]
     fn test_unsigned_001() {
@@ -885,6 +945,28 @@ mod tests {
     }
 
     #[test]
+    fn test_decode_unsigned_min_max_001() {
+        let sig = Unsigned::new(6, 8, 2.0, 1337.0,Endian::Little).unwrap();
+        assert_eq!(sig.min(), 1337.0);
+        assert_eq!(sig.max(), (255.0 * 2.0) + 1337.0);
+    }
+
+    #[test]
+    fn test_decode_unsigned_min_max_002() {
+        let sig = Unsigned::new(6, 8, 1.0, 0.0,Endian::Little).unwrap();
+        assert_eq!(sig.min(), 0.0);
+        assert_eq!(sig.max(), 255.0);
+    }
+
+    #[test]
+    fn test_decode_unsigned_min_max_003() {
+        let sig = Unsigned::new(6, 16, 1.0, 0.0,Endian::Little).unwrap();
+        assert_eq!(sig.min(), 0.0);
+        assert_eq!(sig.max(), 256.0 * 256.0 - 1.0);
+    }
+
+
+    #[test]
     fn test_decode_signed_001() {
         let sig = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
         let data = [0b0111_1111];
@@ -963,6 +1045,27 @@ mod tests {
         println!("{:?}", &decode);
         assert_eq!(decode, Result::Err(DataError::NotEnoughData));
     }
+
+        #[test]
+    fn test_decode_signed_min_max_001() {
+        let sig = Signed::new(6, 8, 2.0, 1337.0,Endian::Little).unwrap();
+        assert_eq!(sig.min(), -128.0 * 2.0 + 1337.0);
+        assert_eq!(sig.max(), 127.0 * 2.0 + 1337.0);
+    }
+
+    // #[test]
+    // fn test_decode_signed_min_max_002() {
+    //     let sig = Signed::new(6, 8, 1.0, 0.0,Endian::Little).unwrap();
+    //     assert_eq!(sig.min(), 0.0);
+    //     assert_eq!(sig.max(), 255.0);
+    // }
+    //
+    // #[test]
+    // fn test_decode_signed_min_max_003() {
+    //     let sig = Signed::new(6, 16, 1.0, 0.0,Endian::Little).unwrap();
+    //     assert_eq!(sig.min(), 0.0);
+    //     assert_eq!(sig.max(), 256.0 * 256.0 - 1.0);
+    // }
 
     // #[test]
     // fn test_decode_raw_001() {
