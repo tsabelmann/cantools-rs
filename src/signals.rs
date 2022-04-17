@@ -262,16 +262,6 @@ impl TryEncode<f64> for Unsigned {
                     return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
                 }
 
-                // compute corresponding bytes that are effected by setting
-                let start_byte = self.start.div(8);
-                let end_byte = (self.start + self.length - 1).div(8);
-
-                // reset corresponding data by setting the bits to zero
-                for i in 0..self.length {
-                    let bit = Bit::new(self.start + i);
-                    bit.encode(data, false);
-                }
-
                 // compute integer value to be set
                 let value = value - self.offset;
                 let value = value / self.factor;
@@ -290,7 +280,6 @@ impl TryEncode<f64> for Unsigned {
 
                     value >>= 1;
                 }
-
             },
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
@@ -299,6 +288,33 @@ impl TryEncode<f64> for Unsigned {
                     return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
                 }
 
+                // compute integer value to be set
+                let value = value - self.offset;
+                let value = value / self.factor;
+                let value = value.trunc() as u64;
+                let mut value = value & u64::mask(self.length, 0);
+
+                // set data by setting the corresponding data bits
+                let mut start = self.start;
+                for _i in 0..self.length {
+                    let bit = Bit::new(start);
+
+                    if value & 1 == 0 {
+                        bit.try_encode(data, false).unwrap();
+                    } else {
+                        bit.try_encode(data, true).unwrap();
+                    }
+
+                    // adjust value to retrieve the next bit in the next iteration
+                    value >>= 1;
+
+                    // update start to be the next bit to set
+                    start = if start % 8 == 0 {
+                        (start.div(8) + 1) * 8 + 7
+                    } else {
+                        start - 1
+                    };
+                }
             }
         }
 
@@ -1032,6 +1048,36 @@ mod tests {
             assert!(result.is_ok());
             assert_eq!(data, [i])
         }
+    }
+
+    #[test]
+    fn test_encode_unsigned_002() {
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0u8, 0u8];
+
+        let result = unsigned.try_encode(&mut data, 255.0);
+        assert!(result.is_ok());
+        assert_eq!(data, [0x0Fu8, 0xF0u8]);
+    }
+
+    #[test]
+    fn test_encode_unsigned_004() {
+        let unsigned = Unsigned::new(2, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0u8, 0u8];
+
+        let result = unsigned.try_encode(&mut data, 255.0);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b0000_0111u8, 0b1111_1000u8]);
+    }
+
+    #[test]
+    fn test_encode_unsigned_005() {
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0xA0u8, 0x0Bu8];
+
+        let result = unsigned.try_encode(&mut data, 255.0);
+        assert!(result.is_ok());
+        assert_eq!(data, [0xAFu8, 0xFBu8]);
     }
 
     /* TEST SIGNED */
