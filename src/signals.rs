@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::ops::Div;
+use std::ops::{Div};
 use crate::utils::{Mask, Endian};
 use crate::data::{CANData, CANWrite};
 use crate::decode::TryDecode;
@@ -265,19 +265,31 @@ impl TryEncode<f64> for Unsigned {
                 // compute corresponding bytes that are effected by setting
                 let start_byte = self.start.div(8);
                 let end_byte = (self.start + self.length - 1).div(8);
-                let s = start_byte..=end_byte;
 
-                // reset data by setting the bits to zero
-                let reset_mask = !u64::mask(self.length, self.start);
-                let bytes = reset_mask.to_le_bytes();
+                // reset corresponding data by setting the bits to zero
+                for i in 0..self.length {
+                    let bit = Bit::new(self.start + i);
+                    bit.encode(data, false);
+                }
 
                 // compute integer value to be set
                 let value = value - self.offset;
                 let value = value / self.factor;
                 let value = value.trunc() as u64;
-                let value = value & u64::mask(self.length, 0);
+                let mut value = value & u64::mask(self.length, 0);
 
                 // set data by setting the corresponding data bits
+                for i in 0..self.length {
+                    let bit = Bit::new(self.start + i);
+
+                    if value & 1 == 0 {
+                        bit.try_encode(data, false).unwrap();
+                    } else {
+                        bit.try_encode(data, true).unwrap();
+                    }
+
+                    value >>= 1;
+                }
 
             },
             Endian::Big => {
@@ -1010,6 +1022,19 @@ mod tests {
         assert_eq!(sig.max(), 256.0 * 256.0 - 1.0);
     }
 
+    #[test]
+    fn test_encode_unsigned_001() {
+        let unsigned = Unsigned::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        for i in 0..=255u8 {
+            let mut data = [0u8];
+
+            let result = unsigned.try_encode(&mut data, i as f64);
+            assert!(result.is_ok());
+            assert_eq!(data, [i])
+        }
+    }
+
+    /* TEST SIGNED */
 
     #[test]
     fn test_decode_signed_001() {
