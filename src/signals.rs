@@ -2,19 +2,14 @@ use std::cmp::min;
 use std::ops::{Div};
 use crate::utils::{Mask, Endian};
 use crate::data::{CANData, CANWrite};
-use crate::decode::TryDecode;
-use crate::encode::{TryEncode, EncodeError, Encode};
+use crate::decode::{TryDecode, DefaultDecode, Decode, DecodeError};
+use crate::encode::{TryEncode, Encode, EncodeError};
 
 
 #[derive(Debug,PartialEq)]
 pub enum LengthError {
     LengthZero,
     LengthGreater64
-}
-
-#[derive(Debug,PartialEq)]
-pub enum DataError {
-    NotEnoughData
 }
 
 ///
@@ -80,13 +75,18 @@ impl TryDecode<bool> for Bit {
     }
 }
 
+impl DefaultDecode<bool> for Bit {}
+impl Decode<bool> for Bit {}
+
 impl TryEncode<bool> for Bit {
-    fn try_encode<D: CANWrite>(&self, data: &mut D, value: bool) -> Result<(), EncodeError> {
+    type Error = EncodeError;
+
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: bool) -> Result<(), Self::Error> {
         let start_bit_in_byte = self.start % 8;
         let start_byte = self.start.div(8);
 
         if start_byte as usize >= data.dlc() {
-            return Err(EncodeError::UnavailableByte(start_byte as u8));
+            return Err(EncodeError::NotEnoughData);
         }
 
         match value {
@@ -174,15 +174,14 @@ impl Max for Unsigned {
     }
 }
 
-
 impl TryDecode<f64> for Unsigned {
-    type Error = DataError;
+    type Error = DecodeError;
 
     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    return Err(DataError::NotEnoughData);
+                    return Err(DecodeError::NotEnoughData);
                 }
 
                 let start_byte = self.start.div(8);
@@ -216,7 +215,7 @@ impl TryDecode<f64> for Unsigned {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    return Err(DataError::NotEnoughData);
+                    return Err(DecodeError::NotEnoughData);
                 }
 
                 let start_byte = self.start.div(8);
@@ -250,16 +249,25 @@ impl TryDecode<f64> for Unsigned {
     }
 }
 
+impl DefaultDecode<f64> for Unsigned {}
+impl Decode<f64> for Unsigned {}
+
 impl TryEncode<f64> for Unsigned {
-    fn try_encode<D: CANWrite>(&self, data: &mut D, value: f64) -> Result<(), EncodeError> {
-        if value < self.min() || value > self.max() {
-            return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+    type Error = EncodeError;
+
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: f64) -> Result<(), Self::Error> {
+        if value < self.min() {
+            return Err(EncodeError::MinError);
+        }
+
+        if value > self.max() {
+            return Err(EncodeError::MaxError);
         }
 
         match self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+                    return Err(EncodeError::NotEnoughData);
                 }
 
                 // compute integer value to be set
@@ -285,14 +293,16 @@ impl TryEncode<f64> for Unsigned {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    return Err(EncodeError::UnavailableByte(0)); // TODO: Change return error
+                    return Err(EncodeError::NotEnoughData);
                 }
 
                 // compute integer value to be set
                 let value = value - self.offset;
                 let value = value / self.factor;
-                let value = value.trunc() as u64;
-                let mut value = value & u64::mask(self.length, 0);
+                let mut value = value.trunc() as u64;
+
+                value &= u64::mask(self.length, 0);
+                value = value.reverse_bits() >> (64 - self.length);
 
                 // set data by setting the corresponding data bits
                 let mut start = self.start;
@@ -321,6 +331,8 @@ impl TryEncode<f64> for Unsigned {
         Ok(())
     }
 }
+
+impl Encode<f64> for Unsigned {}
 
 
 #[derive(Debug, PartialEq)]
@@ -395,13 +407,13 @@ impl Max for Signed {
 }
 
 impl TryDecode<f64> for Signed {
-    type Error = DataError;
+    type Error = DecodeError;
 
     fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
-                    return Err(DataError::NotEnoughData);
+                    return Err(DecodeError::NotEnoughData);
                 }
 
                 let start_byte = self.start.div(8);
@@ -438,7 +450,7 @@ impl TryDecode<f64> for Signed {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
                 if shift < 0 {
-                    return Err(DataError::NotEnoughData);
+                    return Err(DecodeError::NotEnoughData);
                 }
 
                 let start_byte = self.start.div(8);
@@ -476,6 +488,99 @@ impl TryDecode<f64> for Signed {
         }
     }
 }
+
+impl DefaultDecode<f64> for Signed {}
+impl Decode<f64> for Signed {}
+
+impl TryEncode<f64> for Signed {
+    type Error = EncodeError;
+
+    fn try_encode<D: CANWrite>(&self, data: &mut D, value: f64) -> Result<(), Self::Error> {
+        if value < self.min() {
+            return Err(EncodeError::MinError);
+        }
+
+        if value > self.max() {
+            return Err(EncodeError::MaxError);
+        }
+
+        match self.endian {
+            Endian::Little => {
+                if self.start + self.length > (8 * data.dlc() as u16) {
+                    return Err(EncodeError::NotEnoughData);
+                }
+
+                // compute integer value to be set
+                let value = value - self.offset;
+                let value = value / self.factor;
+                let mut value = value.trunc() as i64;
+
+                if value < 0 {
+                    value -= !i64::mask(self.length, 0);
+                };
+
+                value &= i64::mask(self.length, 0);
+
+                // set data by setting the corresponding data bits
+                for i in 0..self.length {
+                    let bit = Bit::new(self.start + i);
+
+                    if value & 1 == 0 {
+                        bit.try_encode(data, false).unwrap();
+                    } else {
+                        bit.try_encode(data, true).unwrap();
+                    }
+
+                    value >>= 1;
+                }
+            },
+            Endian::Big => {
+                let shift = (7 - self.start % 8) + 8 * self.start.div(8);
+                let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
+                if shift < 0 {
+                    return Err(EncodeError::NotEnoughData);
+                }
+
+                // compute integer value to be set
+                let value = value - self.offset;
+                let value = value / self.factor;
+                let mut value = value.trunc() as i64;
+
+                if value < 0 {
+                    value -= !i64::mask(self.length, 0);
+                };
+
+                value &= i64::mask(self.length, 0);
+                value = value.reverse_bits() >> (64 - self.length);
+
+                // set data by setting the corresponding data bits
+                let mut start = self.start;
+                for _i in 0..self.length {
+                    let bit = Bit::new(start);
+
+                    if value & 1 == 0 {
+                        bit.try_encode(data, false).unwrap();
+                    } else {
+                        bit.try_encode(data, true).unwrap();
+                    }
+
+                    // adjust value to retrieve the next bit in the next iteration
+                    value >>= 1;
+
+                    // update start to be the next bit to set
+                    start = if start % 8 == 0 {
+                        (start.div(8) + 1) * 8 + 7
+                    } else {
+                        start - 1
+                    };
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 
 // #[derive(Debug,PartialEq)]
 // pub struct Float32 {
@@ -819,12 +924,11 @@ impl TryDecode<f64> for Signed {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Div;
     use crate::decode::TryDecode;
     use crate::encode::{EncodeError, TryEncode, Encode};
     use crate::utils::{Endian, Mask};
     // use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
-    use crate::signals::{Bit, Unsigned, DataError, Signed, Min, Max};
+    use crate::signals::{Bit, Unsigned, DecodeError, Signed, Min, Max};
 
     #[test]
     fn test_unsigned_001() {
@@ -933,7 +1037,7 @@ mod tests {
             let result = bit.try_encode(&mut data_to_encode, false);
 
             assert!(result.is_err());
-            assert_eq!(result, Err(EncodeError::UnavailableByte(i.div(8) as u8)))
+            assert_eq!(result, Err(EncodeError::NotEnoughData))
         }
     }
 
@@ -1004,7 +1108,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+        assert_eq!(decode, Result::Err(DecodeError::NotEnoughData));
     }
 
     #[test]
@@ -1014,7 +1118,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+        assert_eq!(decode, Result::Err(DecodeError::NotEnoughData));
     }
 
     #[test]
@@ -1078,6 +1182,16 @@ mod tests {
         let result = unsigned.try_encode(&mut data, 255.0);
         assert!(result.is_ok());
         assert_eq!(data, [0xAFu8, 0xFBu8]);
+    }
+
+    #[test]
+    fn test_encode_unsigned_006() {
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0xA0u8, 0x0Bu8];
+
+        let result = unsigned.try_encode(&mut data, 254_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0xAFu8, 0xEBu8]);
     }
 
     /* TEST SIGNED */
@@ -1149,7 +1263,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+        assert_eq!(decode, Result::Err(DecodeError::NotEnoughData));
     }
 
     #[test]
@@ -1159,7 +1273,7 @@ mod tests {
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
-        assert_eq!(decode, Result::Err(DataError::NotEnoughData));
+        assert_eq!(decode, Result::Err(DecodeError::NotEnoughData));
     }
 
         #[test]
@@ -1168,6 +1282,99 @@ mod tests {
         assert_eq!(sig.min(), -128.0 * 2.0 + 1337.0);
         assert_eq!(sig.max(), 127.0 * 2.0 + 1337.0);
     }
+
+    #[test]
+    fn test_encode_signed_001() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        for i in 0..=127u8 {
+            let mut data = [0u8];
+
+            let result = unsigned.try_encode(&mut data, i as f64);
+            assert!(result.is_ok());
+            assert_eq!(data, [i])
+        }
+    }
+
+    #[test]
+    fn test_encode_signed_002() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let mut data = [0u8];
+
+        let result = unsigned.try_encode(&mut data, -128_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b1000_0000u8])
+    }
+
+    #[test]
+    fn test_encode_signed_003() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let mut data = [0u8];
+
+        let result = unsigned.try_encode(&mut data, -1_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b1111_1111])
+    }
+
+    #[test]
+    fn test_encode_signed_004() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let mut data = [0u8];
+
+        let result = unsigned.try_encode(&mut data, 128_f64);
+        assert!(result.is_err());
+        assert_eq!(result, Err(EncodeError::MaxError));
+    }
+
+    #[test]
+    fn test_encode_signed_005() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let mut data = [0u8];
+
+        let result = unsigned.try_encode(&mut data, -129_f64);
+        assert!(result.is_err());
+        assert_eq!(result, Err(EncodeError::MinError));
+    }
+
+    #[test]
+    fn test_encode_signed_006() {
+        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let mut data = [];
+
+        let result = unsigned.try_encode(&mut data, -128_f64);
+        assert!(result.is_err());
+        assert_eq!(result, Err(EncodeError::NotEnoughData));
+    }
+
+    #[test]
+    fn test_encode_signed_007() {
+        let unsigned = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0u8, 0u8];
+
+        let result = unsigned.try_encode(&mut data, 127_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b0000_0111u8, 0b1111_0000u8]);
+    }
+
+    #[test]
+    fn test_encode_signed_008() {
+        let signed = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0b0000_0000u8, 0b0000_0000u8];
+
+        let result = signed.try_encode(&mut data, -128_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b0000_1000u8, 0b0000_0000u8]);
+    }
+
+    #[test]
+    fn test_encode_signed_009() {
+        let signed = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let mut data = [0b1000_0000u8, 0b0000_0001u8];
+
+        let result = signed.try_encode(&mut data, -1_f64);
+        assert!(result.is_ok());
+        assert_eq!(data, [0b1000_1111u8, 0b1111_0001u8]);
+    }
+
 
     // #[test]
     // fn test_decode_signed_min_max_002() {
