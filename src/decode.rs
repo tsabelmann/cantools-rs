@@ -26,7 +26,7 @@ use crate::data::CANRead;
 #[derive(Debug, PartialEq)]
 pub enum DecodeError {
     /// There is not enough byte data available from which one can decode a value.
-    NotEnoughData
+    NotEnoughData,
 }
 
 /// A trait modeling the failable decoding of data.
@@ -45,13 +45,13 @@ pub trait DefaultDecode<T: Default>: TryDecode<T> {
     fn default_decode<D: CANRead>(&self, data: &D) -> T {
         match self.try_decode(data) {
             Ok(value) => value,
-            Err(_) => T::default()
+            Err(_) => T::default(),
         }
     }
 }
 
 /// A trait modeling the not failable decoding of data.
-pub trait Decode<T> : TryDecode<T> {
+pub trait Decode<T>: TryDecode<T> {
     /// Decodes the data.
     ///
     /// # Panics
@@ -59,7 +59,7 @@ pub trait Decode<T> : TryDecode<T> {
     fn decode<D: CANRead>(&self, data: &D) -> T {
         match self.try_decode(data) {
             Ok(value) => value,
-            Err(_) => panic!("cannot decode data")
+            Err(_) => panic!("cannot decode data"),
         }
     }
 }
