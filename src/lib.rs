@@ -29,13 +29,13 @@ pub use data::{CANRead, CANWrite};
 pub mod utils;
 pub use utils::{Mask, Endian};
 
-#[cfg(feature = "decode")]
 pub mod decode;
+pub use decode::{TryDecode, DefaultDecode, Decode};
 
-#[cfg(feature = "encode")]
 pub mod encode;
+pub use encode::{TryEncode, Encode};
 
-#[cfg(feature = "signals")]
 pub mod signals;
+pub use signals::{Bit, Unsigned, Signed, LengthError};
 
 pub mod logging;
