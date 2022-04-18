@@ -3,7 +3,7 @@
 [![crates](https://img.shields.io/crates/v/cantools)](https://crates.io/crates/cantools)
 [![Documentation](https://img.shields.io/docsrs/cantools)](https://docs.rs/crate/cantools/latest)
 [![Crate License](https://img.shields.io/crates/l/cantools.svg)](https://crates.io/crates/cantools)
-[![Codecov](https://codecov.io/github/tsabelmann/cantools-rs/coverage.svg?branch=main)](https://codecov.io/gh/tsabelmann/cantools)
+[![Codecov](https://codecov.io/github/tsabelmann/cantools-rs/coverage.svg?branch=main)](https://codecov.io/gh/tsabelmann/cantools-rs)
 [![Dependency status](https://deps.rs/repo/github/tsabelmann/cantools-rs/status.svg)](https://deps.rs/repo/github/tsabelmann/cantools-rs)
 
 *Rust crate for analyzing CAN-bus data using signals*
