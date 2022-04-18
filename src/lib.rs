@@ -27,15 +27,15 @@ pub mod data;
 pub use data::{CANRead, CANWrite};
 
 pub mod utils;
-pub use utils::{Mask, Endian};
+pub use utils::{Endian, Mask};
 
 pub mod decode;
-pub use decode::{TryDecode, DefaultDecode, Decode};
+pub use decode::{Decode, DefaultDecode, TryDecode};
 
 pub mod encode;
-pub use encode::{TryEncode, Encode};
+pub use encode::{Encode, TryEncode};
 
 pub mod signals;
-pub use signals::{Bit, Unsigned, Signed, LengthError};
+pub use signals::{Bit, LengthError, Signed, Unsigned};
 
 pub mod logging;
