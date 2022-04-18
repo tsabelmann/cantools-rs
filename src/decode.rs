@@ -8,7 +8,7 @@
 //!
 //! # Example
 //! ```
-//! use cantools::data::CANData;
+//! use cantools::data::CANRead;
 //! use cantools::signals::Bit;
 //! use cantools::decode::{TryDecode, DefaultDecode, Decode};
 //!
@@ -20,7 +20,7 @@
 //! let result_3 = bit.decode(&data);
 //! ```
 
-use crate::data::CANData;
+use crate::data::CANRead;
 
 /// Type representing possible decoding errors.
 #[derive(Debug, PartialEq)]
@@ -35,14 +35,14 @@ pub trait TryDecode<T> {
     type Error;
 
     /// Tries to decode a value.
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<T, Self::Error>;
+    fn try_decode<D: CANRead>(&self, data: &D) -> Result<T, Self::Error>;
 }
 
 /// A trait modeling the failable decoding of data.
 pub trait DefaultDecode<T: Default>: TryDecode<T> {
     /// Tries to decode a value. If the data is not decodable, a default value is returned.
     /// Otherwise, the decoded value is returned.
-    fn default_decode<D: CANData>(&self, data: &D) -> T {
+    fn default_decode<D: CANRead>(&self, data: &D) -> T {
         match self.try_decode(data) {
             Ok(value) => value,
             Err(_) => T::default()
@@ -56,7 +56,7 @@ pub trait Decode<T> : TryDecode<T> {
     ///
     /// # Panics
     /// If the data is not decodable internally, the call to [decode](Decode::decode) panics.
-    fn decode<D: CANData>(&self, data: &D) -> T {
+    fn decode<D: CANRead>(&self, data: &D) -> T {
         match self.try_decode(data) {
             Ok(value) => value,
             Err(_) => panic!("cannot decode data")

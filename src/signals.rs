@@ -1,7 +1,7 @@
 use std::cmp::min;
 use std::ops::{Div};
 use crate::utils::{Mask, Endian};
-use crate::data::{CANData, CANWrite};
+use crate::data::{CANRead, CANWrite};
 use crate::decode::{TryDecode, DefaultDecode, Decode, DecodeError};
 use crate::encode::{TryEncode, Encode, EncodeError};
 
@@ -56,7 +56,7 @@ impl Bit {
 impl TryDecode<bool> for Bit {
     type Error = ();
 
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<bool, Self::Error> {
+    fn try_decode<D: CANRead>(&self, data: &D) -> Result<bool, Self::Error> {
         if self.start >= (8 * data.dlc()) as u16 {
             Err(())
         } else {
@@ -177,7 +177,7 @@ impl Max for Unsigned {
 impl TryDecode<f64> for Unsigned {
     type Error = DecodeError;
 
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
+    fn try_decode<D: CANRead>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {
@@ -405,7 +405,7 @@ impl Max for Signed {
 impl TryDecode<f64> for Signed {
     type Error = DecodeError;
 
-    fn try_decode<D: CANData>(&self, data: &D) -> Result<f64, Self::Error> {
+    fn try_decode<D: CANRead>(&self, data: &D) -> Result<f64, Self::Error> {
         match &self.endian {
             Endian::Little => {
                 if self.start + self.length > (8 * data.dlc() as u16) {

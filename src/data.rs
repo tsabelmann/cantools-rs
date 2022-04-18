@@ -8,9 +8,8 @@
 //! The [CANWrite] trait provides one additional methods. The [mut_data](CANWrite::mut_data) method
 //! allows for mutating the slice.
 
-
 /// A trait providing methods for accessing the underlying bytes of some CAN-bus data.
-pub trait CANData {
+pub trait CANRead {
     /// Returns a slice representing the accessible bytes.
     fn data(&self) -> &[u8];
 
@@ -18,41 +17,18 @@ pub trait CANData {
     fn dlc(&self) -> usize;
 }
 
-/// Type representing failure in the process of writing CAN-bus data.
-#[derive(Debug, PartialEq)]
-pub enum CANWriteError {
-    /// The byte at some index is not available or not existent.
-    UnavailableByte(u8)
-}
-
 /// A trait providing methods for accessing the underlying data in a mutable fashion.
-pub trait CANWrite: CANData {
+pub trait CANWrite: CANRead {
     /// Returns a mutable slice representing the mutable data.
     fn mut_data(&mut self) -> &mut [u8];
-
-    // /// Retrieves the byte and `index` and sets it to the value `value`. If the byte at `index` is
-    // /// unavailable, a [CANWriteError] is returned.
-    // fn set(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
-    //
-    // /// Retrieves the byte and `index` and sets the byte to the disjunction of the former value and
-    // /// `value`. If the byte at `index` is unavailable, a [CANWriteError] is returned.
-    // fn or(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
-    //
-    // /// Retrieves the byte and `index` and sets the byte to the conjunction of the former value and
-    // /// `value`. If the byte at `index` is unavailable, a [CANWriteError] is returned.
-    // fn and(&mut self, value: u8, index: u8) -> Result<u8, CANWriteError>;
-    //
-    // /// Retrieves the byte and `index` and sets the byte to its bit-wise inverse. If the byte at
-    // /// `index` is unavailable, a [CANWriteError] is returned.
-    // fn not(&mut self, index: u8) -> Result<u8, CANWriteError>;
 }
 
-impl CANData for Vec<u8> {
+impl CANRead for Vec<u8> {
     /// # Example
     /// ```
-    /// use cantools::data::CANData;
+    /// use cantools::data::CANRead;
     /// let v = Vec::<u8>::new();
-    /// assert_eq!(CANData::data(&v), &[]);
+    /// assert_eq!(CANRead::data(&v), &[]);
     /// ```
     fn data(&self) -> &[u8] {
         self.as_slice()
@@ -60,9 +36,9 @@ impl CANData for Vec<u8> {
 
     /// # Example
     /// ```
-    /// use cantools::data::CANData;
+    /// use cantools::data::CANRead;
     /// let v = Vec::<u8>::new();
-    /// assert_eq!(CANData::dlc(&v), 0);
+    /// assert_eq!(CANRead::dlc(&v), 0);
     /// ```
     fn dlc(&self) -> usize {
         self.len()
@@ -75,11 +51,11 @@ impl CANWrite for Vec<u8> {
     }
 }
 
-impl CANData for &[u8] {
+impl CANRead for &[u8] {
     /// ```
-    /// use cantools::data::CANData;
+    /// use cantools::data::CANRead;
     /// let v : [u8; 0] = [];
-    /// assert_eq!(CANData::data(&v), &[]);
+    /// assert_eq!(CANRead::data(&v), &[]);
     /// ```
     fn data(&self) -> &[u8] {
         self
@@ -87,16 +63,16 @@ impl CANData for &[u8] {
 
     /// # Example
     /// ```
-    /// use cantools::data::CANData;
+    /// use cantools::data::CANRead;
     /// let v : [u8; 0] = [];
-    /// assert_eq!(CANData::dlc(&v), 0);
+    /// assert_eq!(CANRead::dlc(&v), 0);
     /// ```
     fn dlc(&self) -> usize {
         self.len()
     }
 }
 
-impl CANData for &mut [u8] {
+impl CANRead for &mut [u8] {
     fn data(&self) -> &[u8] {
         self
     }
@@ -112,7 +88,7 @@ impl CANWrite for &mut [u8] {
     }
 }
 
-impl<const N: usize> CANData for [u8; N] {
+impl<const N: usize> CANRead for [u8; N] {
     fn data(&self) -> &[u8] {
         self.as_ref()
     }
@@ -130,7 +106,7 @@ impl<const N: usize> CANWrite for [u8; N] {
 
 #[cfg(test)]
 mod tests {
-    use super::CANData;
+    use super::CANRead;
 
     #[test]
     fn test_001() {
@@ -139,7 +115,7 @@ mod tests {
             for j in 0..i {
                 v.push(j);
             }
-            assert_eq!(CANData::dlc(&v), i as usize);
+            assert_eq!(CANRead::dlc(&v), i as usize);
         }
     }
 
@@ -150,7 +126,7 @@ mod tests {
             for j in 0..i {
                 v.push(j);
             }
-            assert_eq!(CANData::data(&v), v.as_slice());
+            assert_eq!(CANRead::data(&v), v.as_slice());
         }
     }
 }

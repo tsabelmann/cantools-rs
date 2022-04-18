@@ -1,7 +1,7 @@
 //! Module contains logfile types used to access the underlying CAN-bus data.
 
 
-use crate::data::CANData;
+use crate::data::CANRead;
 use std::path::{Path};
 use std::iter::{Iterator, IntoIterator};
 use std::fs::File;
@@ -49,7 +49,7 @@ pub struct CANDumpEntry {
     data: Vec<u8>
 }
 
-impl CANData for CANDumpEntry {
+impl CANRead for CANDumpEntry {
     fn data(&self) -> &[u8] {
         &self.data
     }
@@ -392,7 +392,7 @@ impl ToString for CANDumpLogEntry {
     }
 }
 
-impl CANData for CANDumpLogEntry {
+impl CANRead for CANDumpLogEntry {
     fn data(&self) -> &[u8] {
         &self.data
     }

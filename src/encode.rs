@@ -6,7 +6,7 @@
 //!
 //! # Example
 //! ```
-//! use cantools::data::CANData;
+//! use cantools::data::CANRead;
 //! use cantools::signals::Bit;
 //! use cantools::encode::{TryEncode, Encode};
 //!
