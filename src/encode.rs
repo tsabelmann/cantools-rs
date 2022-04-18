@@ -1,8 +1,8 @@
 //! Module providing utility traits for encoding CAN-bus data.
 //!
-//! The module provides two traits: [TryEncode], and [Encode]. [TryEncode] models the possibility of
-//! the encoding to fail whereas [Encode] models the not failable encoding. If [Encode] fails to
-//! encode internally, it panics.
+//! The module provides two traits: [TryEncode], and [Encode]. [try_encode](TryEncode::encode)
+//! models the possibility that the encoding fails whereas [encode](Encode::encode) models the not
+//! failable encoding. If [encode](Encode::encode) fails internally, it panics.
 //!
 //! # Example
 //! ```
@@ -16,7 +16,6 @@
 //! let result = bit.try_encode(&mut data, true);
 //! bit.encode(&mut data, false);
 //! ```
-//!
 
 use crate::data::CANWrite;
 
@@ -36,7 +35,7 @@ pub trait TryEncode<T> {
     /// A type modelling the different possible failures of the encoding.
     type Error;
 
-    /// Tries to encode `value`.
+    /// Tries to encode `value` into `data`.
     fn try_encode<D: CANWrite>(&self, data: &mut D, value: T) -> Result<(), Self::Error>;
 }
 
@@ -45,14 +44,12 @@ pub trait TryEncode<T> {
 /// [Encode] is sub-trait of [TryEncode]. [encode](Encode::encode) is implemented using
 /// [try_encode](TryEncode::try_encode). If [try_encode](TryEncode::try_encode) succeeds,
 /// [encode](Encode::encode) returns. Otherwise, [encode](Encode::encode) panics.
-///
 pub trait Encode<T>: TryEncode<T> {
     /// Encodes `value` into the CAN-bus data `data`.
     ///
     /// # Panics
     /// [encode](Encode::encode) panics if the call to [try_encode](TryEncode::try_encode) in the
     /// implementation returns the error variant.
-    ///
     fn encode<D: CANWrite>(&self, data: &mut D, value: T) {
         match self.try_encode(data, value) {
             Ok(_) => (),
