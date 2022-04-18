@@ -47,7 +47,7 @@ pub trait Mask {
 impl Mask for u8 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -72,7 +72,7 @@ impl Mask for u8 {
 impl Mask for u16 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -97,7 +97,7 @@ impl Mask for u16 {
 impl Mask for u32 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -122,7 +122,7 @@ impl Mask for u32 {
 impl Mask for u64 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -147,7 +147,7 @@ impl Mask for u64 {
 impl Mask for i8 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -172,7 +172,7 @@ impl Mask for i8 {
 impl Mask for i16 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -197,7 +197,7 @@ impl Mask for i16 {
 impl Mask for i32 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -219,11 +219,10 @@ impl Mask for i32 {
     }
 }
 
-
 impl Mask for i64 {
     fn mask(length: u16, shift: u16) -> Self {
         let mut result = 0;
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             result += 1;
             result <<= 1;
         }
@@ -246,14 +245,14 @@ impl Mask for i64 {
 }
 
 /// Type for describing the underlying byte-order.
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Endian {
     /// The byte-order is little-endian, or in other words, the least significant byte is stored
     /// at the lowest memory address.
     Little,
     /// The byte-order is little-endian, or in other words, the most significant byte is stored
     /// at the lowest memory address.
-    Big
+    Big,
 }
 
 impl Default for Endian {
@@ -286,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_mask_u8_004() {
-        let value: u8 = Mask::bit_mask(&[1,2,3,4]);
+        let value: u8 = Mask::bit_mask(&[1, 2, 3, 4]);
         assert_eq!(value, 0b0001_1110u8);
     }
 
@@ -299,19 +298,19 @@ mod tests {
     // u16
     #[test]
     fn test_mask_u16_001() {
-        let value: u16 = Mask::mask(8,8);
+        let value: u16 = Mask::mask(8, 8);
         assert_eq!(value, 0xFF00);
     }
 
     #[test]
     fn test_mask_u16_002() {
-        let value: u16 = Mask::mask(8,4);
+        let value: u16 = Mask::mask(8, 4);
         assert_eq!(value, 0x0FF0);
     }
 
     #[test]
     fn test_mask_u16_003() {
-        let value: u16 = Mask::mask(1,15);
+        let value: u16 = Mask::mask(1, 15);
         assert_eq!(value, 0b1000_0000_0000_0000u16);
     }
 
@@ -324,28 +323,28 @@ mod tests {
     #[test]
     fn test_mask_u16_005() {
         let value1: u16 = Mask::mask(4, 12);
-        let value2: u16 = Mask::bit_mask(&[15,14,13,12]);
+        let value2: u16 = Mask::bit_mask(&[15, 14, 13, 12]);
         assert_eq!(&value1, &value2);
         assert_eq!(value1, 0xF0_00);
         assert_eq!(value2, 0xF0_00);
     }
 
-     // u32
+    // u32
     #[test]
     fn test_mask_u32_001() {
-        let value: u32 = Mask::mask(16,8);
+        let value: u32 = Mask::mask(16, 8);
         assert_eq!(value, 0x00_FF_FF_00);
     }
 
     #[test]
     fn test_mask_u32_002() {
-        let value: u32 = Mask::mask(16,4);
+        let value: u32 = Mask::mask(16, 4);
         assert_eq!(value, 0x00_0F_FF_F0);
     }
 
     #[test]
     fn test_mask_u32_003() {
-        let value: u32 = Mask::mask(1,15);
+        let value: u32 = Mask::mask(1, 15);
         assert_eq!(value, 0b1000_0000_0000_0000u32);
     }
 
@@ -357,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_mask_u32_005() {
-        let value1: u32 = Mask::mask(32,0);
+        let value1: u32 = Mask::mask(32, 0);
         let value2: u32 = Mask::full_mask();
         assert_eq!(value1, value2);
     }
@@ -365,28 +364,28 @@ mod tests {
     #[test]
     fn test_mask_u32_006() {
         let value1: u32 = Mask::mask(4, 28);
-        let value2: u32 = Mask::bit_mask(&[31,30,29,28]);
+        let value2: u32 = Mask::bit_mask(&[31, 30, 29, 28]);
         assert_eq!(&value1, &value2);
         assert_eq!(value1, 0xF0_00_00_00);
         assert_eq!(value2, 0xF0_00_00_00);
     }
 
-     // u64
+    // u64
     #[test]
     fn test_mask_u64_001() {
-        let value: u64 = Mask::mask(16,8);
+        let value: u64 = Mask::mask(16, 8);
         assert_eq!(value, 0x00_FF_FF_00);
     }
 
     #[test]
     fn test_mask_u64_002() {
-        let value: u64 = Mask::mask(16,4);
+        let value: u64 = Mask::mask(16, 4);
         assert_eq!(value, 0x00_0F_FF_F0);
     }
 
     #[test]
     fn test_mask_u64_003() {
-        let value: u64 = Mask::mask(1,15);
+        let value: u64 = Mask::mask(1, 15);
         assert_eq!(value, 0b1000_0000_0000_0000);
     }
 
@@ -398,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_mask_u64_005() {
-        let value1: u64 = Mask::mask(64,0);
+        let value1: u64 = Mask::mask(64, 0);
         let value2: u64 = Mask::full_mask();
         assert_eq!(value1, value2);
     }
@@ -406,7 +405,7 @@ mod tests {
     #[test]
     fn test_mask_u64_006() {
         let value1: u64 = Mask::mask(4, 60);
-        let value2: u64 = Mask::bit_mask(&[63,62,61,60]);
+        let value2: u64 = Mask::bit_mask(&[63, 62, 61, 60]);
         assert_eq!(&value1, &value2);
         assert_eq!(value1, 0xF0_00_00_00_00_00_00_00);
         assert_eq!(value2, 0xF0_00_00_00_00_00_00_00);
@@ -427,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_mask_i8_003() {
-        let value: i8 = Mask::bit_mask(&[1,2,3,4]);
+        let value: i8 = Mask::bit_mask(&[1, 2, 3, 4]);
         assert_eq!(value, 0b0001_1110i8);
     }
 
@@ -446,8 +445,8 @@ mod tests {
 
     #[test]
     fn test_mask_i16_002() {
-        let value1: i16 = Mask::mask(4,12);
-        let value2: i16 = Mask::bit_mask(&[15,14,13,12]);
+        let value1: i16 = Mask::mask(4, 12);
+        let value2: i16 = Mask::bit_mask(&[15, 14, 13, 12]);
         assert_eq!(&value1, &value2);
     }
 
@@ -459,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_mask_i16_004() {
-        let value1: i16 = Mask::mask(16,0);
+        let value1: i16 = Mask::mask(16, 0);
         let value2: i16 = Mask::full_mask();
         assert_eq!(&value1, &value2);
         assert_eq!(value1, -1);
@@ -481,8 +480,8 @@ mod tests {
 
     #[test]
     fn test_mask_i32_002() {
-        let value1: i32 = Mask::mask(4,28);
-        let value2: i32 = Mask::bit_mask(&[31,30,29,28]);
+        let value1: i32 = Mask::mask(4, 28);
+        let value2: i32 = Mask::bit_mask(&[31, 30, 29, 28]);
         assert_eq!(&value1, &value2);
     }
 
@@ -494,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_mask_i32_004() {
-        let value1: i32 = Mask::mask(32,0);
+        let value1: i32 = Mask::mask(32, 0);
         let value2: i32 = Mask::full_mask();
         assert_eq!(&value1, &value2);
         assert_eq!(value1, -1);
@@ -516,8 +515,8 @@ mod tests {
 
     #[test]
     fn test_mask_i64_002() {
-        let value1: i64 = Mask::mask(4,60);
-        let value2: i64 = Mask::bit_mask(&[63,62,61,60]);
+        let value1: i64 = Mask::mask(4, 60);
+        let value2: i64 = Mask::bit_mask(&[63, 62, 61, 60]);
         assert_eq!(&value1, &value2);
     }
 
@@ -529,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_mask_i64_004() {
-        let value1: i64 = Mask::mask(64,0);
+        let value1: i64 = Mask::mask(64, 0);
         let value2: i64 = Mask::full_mask();
         assert_eq!(&value1, &value2);
         assert_eq!(value1, -1);
