@@ -1,3 +1,25 @@
+//! Module provides convenient signal types used for decoding and encoding of CAN-bus data.
+//!
+//! As of now, this module provides **three** signal types: [Bit], [Unsigned], and [Signed]. [Bit]
+//! models one bit whereas [Unsigned] and [Signed] model multiple, i.e., up to 64 bits.
+//! Both [Unsigned] and [Signed] treat the sequence of bytes as integers, and as the names suggest:
+//! [Unsigned] as unsigned and [Signed] as signed integers.
+//!
+//! More signals are planed for upcoming releases of this crate including signals for bit sequences
+//! representing integers, floats, and doubles.
+//!
+//! # Example
+//! ```
+//! use cantools::signals::{*};
+//! use cantools::utils::Endian;
+//! use cantools::decode::{TryDecode, DefaultDecode, Decode, DecodeError};
+//! use cantools::encode::{TryEncode, Encode, EncodeError};
+//!
+//! let sig_1 = Bit::new(42);
+//! let sig_2 = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
+//! let sig_3 = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
+//! ```
+
 use std::cmp::min;
 use std::ops::{Div};
 use crate::utils::{Mask, Endian};
@@ -5,31 +27,34 @@ use crate::data::{CANRead, CANWrite};
 use crate::decode::{TryDecode, DefaultDecode, Decode, DecodeError};
 use crate::encode::{TryEncode, Encode, EncodeError};
 
-
+/// A type modeling possible construction errors.
 #[derive(Debug,PartialEq)]
 pub enum LengthError {
+    /// The length, i.e., the number of bits is set to zero.
     LengthZero,
+    /// The length, i.e., the number of bits is set to a value greater than 64.
     LengthGreater64
 }
 
-///
+/// A trait providing a convenient way to calculate the minimal producible value.
 pub trait Min {
+    /// The type of return value of a call to [min](Min::min).
     type Item;
 
-    ///
+    /// The minimal value producible by the implementor.
     fn min(&self) -> Self::Item;
 }
 
-///
+/// A trait providing a convenient way to calculate the maximal producible value.
 pub trait Max {
-    ///
+    /// The type of return value of a call to [max](Max::max).
     type Item;
 
-    ///
+    /// The maximal value producible by the implementor.
     fn max(&self) -> Self::Item;
 }
 
-
+/// A type modeling one bit.
 #[derive(Debug,Default,PartialEq)]
 pub struct Bit {
     start: u16
@@ -42,14 +67,9 @@ impl Bit {
     /// ```
     /// use cantools::signals::Bit;
     /// let sig = Bit::new(42);
-    /// assert_eq!(sig.start(), 42);
     /// ```
     pub fn new(start: u16) -> Bit {
         Bit{ start }
-    }
-
-    pub fn start(&self) -> u16 {
-        self.start
     }
 }
 
@@ -106,6 +126,15 @@ impl TryEncode<bool> for Bit {
 
 impl Encode<bool> for Bit {}
 
+/// A type modeling multiple bits.
+///
+/// The `length` number of bits represent an unsigned integer which is multiplied with the `factor`,
+/// and summed up with the `offset`. The `endian` controls the exact sequence of selected bits.
+///
+/// The following formula summarizes the relation between the bit sequence, `factor`, and `offset`:
+/// ```latex
+/// result = bits_unsigned * factor + offset
+/// ```
 #[derive(Debug,PartialEq)]
 pub struct Unsigned {
     start: u16,
@@ -124,8 +153,11 @@ impl Unsigned {
     /// use cantools::utils::Endian;
     /// let sig = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
-    pub fn new(start: u16, length: u16,
-               factor: f64, offset: f64, endian: Endian) -> Result<Unsigned, LengthError> {
+    pub fn new(start: u16,
+               length: u16,
+               factor: f64,
+               offset: f64,
+               endian: Endian) -> Result<Unsigned, LengthError> {
         if length == 0 {
             Err(LengthError::LengthZero)
         } else if length > 64 {
@@ -330,7 +362,15 @@ impl TryEncode<f64> for Unsigned {
 
 impl Encode<f64> for Unsigned {}
 
-
+/// A type modeling multiple bits.
+///
+/// The `length` number of bits represent a signed integer which is multiplied with the `factor`,
+/// and summed up with the `offset`. The `endian` controls the exact sequence of selected bits.
+///
+/// The following formula summarizes the relation between the bit sequence, `factor`, and `offset`:
+/// ```latex
+/// result = bits_signed * factor + offset
+/// ```
 #[derive(Debug, PartialEq)]
 pub struct Signed {
     start: u16,
@@ -349,8 +389,11 @@ impl Signed {
     /// use cantools::utils::Endian;
     /// let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
-    pub fn new(start: u16, length: u16,
-               factor: f64, offset: f64, endian: Endian) -> Result<Signed, LengthError> {
+    pub fn new(start: u16,
+               length: u16,
+               factor: f64,
+               offset: f64,
+               endian: Endian) -> Result<Signed, LengthError> {
         if length == 0 {
             Err(LengthError::LengthZero)
         } else if length > 64 {
