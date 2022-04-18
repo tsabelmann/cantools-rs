@@ -8,7 +8,10 @@
 //!     the Julia programming language
 
 pub mod data;
+pub use data::{CANRead, CANWrite};
+
 pub mod utils;
+pub use utils::{Mask, Endian};
 
 #[cfg(feature = "decode")]
 pub mod decode;
@@ -16,10 +19,6 @@ pub mod decode;
 #[cfg(feature = "encode")]
 pub mod encode;
 
-#[cfg(feature = "prelude")]
-pub mod prelude;
-
 #[cfg(feature = "signals")]
 pub mod signals;
 
-pub mod logging;
