@@ -1,11 +1,13 @@
 [package]
 name = "cantools"
-version = "0.1.0"
-authors = ["tsabelmann"]
-description = "A can-bus data analysis library"
+version = "0.2.0"
+authors = ["Tim Lucas Sabelmann <tsabelmann>"]
+description = "CAN-bus data analysis library"
+keywords = ["gps", "can", "serial", "csv"]
 edition = "2021"
 
 license-file = "LICENSE"
+homepage = "https://github.com/tsabelmann/gpscandump-rs"
 documentation = "https://docs.rs/cantools"
 repository = "https://github.com/tsabelmann/cantools"
 readme = "README.md"
