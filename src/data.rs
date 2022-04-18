@@ -1,9 +1,8 @@
-//! Module providing convenient access to the underlying CAN-bus data, either read-only
-//! (see [CANData]), or read and write (see [CANWrite]).
+//! Module providing utility traits for accessing and mutating CAN-bus data.
 //!
-//! The [CANData] trait provides methods and retrieve the [DLC](CANData::dlc), the number of
-//! available bytes, and a [data](CANData::data) slice that is read-only. In theory, only the
-//! [data](CANData::data) slice is needed since one can retrieve the DLC from the slice as well.
+//! The [CANRead] trait provides methods and retrieve the [DLC](CANRead::dlc), the number of
+//! available bytes, and a [data](CANRead::data) slice that is read-only. In theory, only the
+//! [data](CANRead::data) slice is needed since one can retrieve the DLC from the slice as well.
 //!
 //! The [CANWrite] trait provides one additional methods. The [mut_data](CANWrite::mut_data) method
 //! allows for mutating the slice.
