@@ -5,8 +5,8 @@
 //! available bytes, and a [data](CANData::data) slice that is read-only. In theory, only the
 //! [data](CANData::data) slice is needed since one can retrieve the DLC from the slice as well.
 //!
-//! The [CANWrite] trait provides additional methods. The [mut_data](CANWrite::mut_data) method
-//! allows for mutating the slice. [set](CANWrite::set) allows for a safe mutation of bytes.
+//! The [CANWrite] trait provides one additional methods. The [mut_data](CANWrite::mut_data) method
+//! allows for mutating the slice.
 
 
 /// A trait providing methods for accessing the underlying bytes of some CAN-bus data.
