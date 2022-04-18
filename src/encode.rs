@@ -1,6 +1,6 @@
 //! Module providing utility traits for encoding CAN-bus data.
 //!
-//! The module provides two traits: [TryEncode], and [Encode]. [try_encode](TryEncode::encode)
+//! The module provides two traits: [TryEncode], and [Encode]. [try_encode](TryEncode::try_encode)
 //! models the possibility that the encoding fails whereas [encode](Encode::encode) models the not
 //! failable encoding. If [encode](Encode::encode) fails internally, it panics.
 //!
