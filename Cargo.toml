@@ -3,7 +3,7 @@ name = "cantools"
 version = "0.2.0"
 authors = ["Tim Lucas Sabelmann <tsabelmann>"]
 description = "CAN-bus data analysis library"
-keywords = ["gps", "can", "serial", "csv"]
+keywords = ["can", "decode", "encode", "signals", "logging"]
 edition = "2021"
 
 license-file = "LICENSE"
