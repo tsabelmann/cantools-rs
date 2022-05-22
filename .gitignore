@@ -3,3 +3,8 @@ Cargo.lock
 
 # Idea
 .idea
+
+# CANDump
+candump/testdump.log
+candump/testdump_2.log
+candump/testdump_3.log

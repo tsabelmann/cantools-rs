@@ -20,20 +20,20 @@
 //! let sig_3 = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
 //! ```
 
-use std::cmp::min;
-use std::ops::{Div};
-use crate::utils::{Mask, Endian};
 use crate::data::{CANRead, CANWrite};
-use crate::decode::{TryDecode, DefaultDecode, Decode, DecodeError};
-use crate::encode::{TryEncode, Encode, EncodeError};
+use crate::decode::{Decode, DecodeError, DefaultDecode, TryDecode};
+use crate::encode::{Encode, EncodeError, TryEncode};
+use crate::utils::{Endian, Mask};
+use std::cmp::min;
+use std::ops::Div;
 
 /// A type modeling possible construction errors.
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum LengthError {
     /// The length, i.e., the number of bits is set to zero.
     LengthZero,
     /// The length, i.e., the number of bits is set to a value greater than 64.
-    LengthGreater64
+    LengthGreater64,
 }
 
 /// A trait providing a convenient way to calculate the minimal producible value.
@@ -55,9 +55,9 @@ pub trait Max {
 }
 
 /// A type modeling one bit.
-#[derive(Debug,Default,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Bit {
-    start: u16
+    start: u16,
 }
 
 impl Bit {
@@ -69,7 +69,7 @@ impl Bit {
     /// let sig = Bit::new(42);
     /// ```
     pub fn new(start: u16) -> Bit {
-        Bit{ start }
+        Bit { start }
     }
 }
 
@@ -113,13 +113,12 @@ impl TryEncode<bool> for Bit {
             true => {
                 let mask_byte = u8::mask(1, start_bit_in_byte);
                 data.mut_data()[start_byte as usize] |= mask_byte;
-            },
+            }
             false => {
                 let mask_byte = !u8::mask(1, start_bit_in_byte);
                 data.mut_data()[start_byte as usize] &= mask_byte;
             }
         }
-
         Ok(())
     }
 }
@@ -135,13 +134,13 @@ impl Encode<bool> for Bit {}
 /// ```latex
 /// result = bits_unsigned * factor + offset
 /// ```
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Unsigned {
     start: u16,
     length: u16,
     factor: f64,
     offset: f64,
-    endian: Endian
+    endian: Endian,
 }
 
 impl Unsigned {
@@ -153,11 +152,13 @@ impl Unsigned {
     /// use cantools::utils::Endian;
     /// let sig = Unsigned::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
-    pub fn new(start: u16,
-               length: u16,
-               factor: f64,
-               offset: f64,
-               endian: Endian) -> Result<Unsigned, LengthError> {
+    pub fn new(
+        start: u16,
+        length: u16,
+        factor: f64,
+        offset: f64,
+        endian: Endian,
+    ) -> Result<Unsigned, LengthError> {
         if length == 0 {
             Err(LengthError::LengthZero)
         } else if length > 64 {
@@ -168,7 +169,7 @@ impl Unsigned {
                 length,
                 factor,
                 offset,
-                endian
+                endian,
             };
             Ok(var)
         }
@@ -182,7 +183,7 @@ impl Default for Unsigned {
             length: 1,
             factor: 1.0,
             offset: 0.0,
-            endian: Endian::Little
+            endian: Endian::Little,
         }
     }
 }
@@ -220,14 +221,14 @@ impl TryDecode<f64> for Unsigned {
                 let bit_in_start_byte = self.start % 8;
                 let end_byte = (self.start + self.length - 1).div(8);
 
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let mut slice = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
                 let s = start_byte..=end_byte;
 
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                    match data.data().get(byte_index as usize){
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i, _)| *i < 8) {
+                    match data.data().get(byte_index as usize) {
                         None => {
                             slice[i] = 0;
-                        },
+                        }
                         Some(value) => {
                             slice[i] = *value;
                         }
@@ -242,7 +243,7 @@ impl TryDecode<f64> for Unsigned {
                 result *= &self.factor;
                 result += &self.offset;
                 Ok(result)
-            },
+            }
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
@@ -254,17 +255,17 @@ impl TryDecode<f64> for Unsigned {
                 let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
                 let end_byte = (end_byte + self.length - 1).div(8);
 
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let mut slice = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
                 let s = start_byte..=end_byte;
 
                 let min_data = min(8, s.len());
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                    match data.data().get(byte_index as usize){
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i, _)| *i < min_data) {
+                    match data.data().get(byte_index as usize) {
                         None => {
-                            slice[min_data-i-1] = 0;
-                        },
+                            slice[min_data - i - 1] = 0;
+                        }
                         Some(value) => {
-                            slice[min_data-i-1] = *value;
+                            slice[min_data - i - 1] = *value;
                         }
                     }
                 }
@@ -320,7 +321,7 @@ impl TryEncode<f64> for Unsigned {
 
                     value >>= 1;
                 }
-            },
+            }
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
@@ -377,7 +378,7 @@ pub struct Signed {
     length: u16,
     factor: f64,
     offset: f64,
-    endian: Endian
+    endian: Endian,
 }
 
 impl Signed {
@@ -389,11 +390,13 @@ impl Signed {
     /// use cantools::utils::Endian;
     /// let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
     /// ```
-    pub fn new(start: u16,
-               length: u16,
-               factor: f64,
-               offset: f64,
-               endian: Endian) -> Result<Signed, LengthError> {
+    pub fn new(
+        start: u16,
+        length: u16,
+        factor: f64,
+        offset: f64,
+        endian: Endian,
+    ) -> Result<Signed, LengthError> {
         if length == 0 {
             Err(LengthError::LengthZero)
         } else if length > 64 {
@@ -404,7 +407,7 @@ impl Signed {
                 length,
                 factor,
                 offset,
-                endian
+                endian,
             };
             Ok(var)
         }
@@ -418,7 +421,7 @@ impl Default for Signed {
             length: 1,
             factor: 1.0,
             offset: 0.0,
-            endian: Endian::Little
+            endian: Endian::Little,
         }
     }
 }
@@ -427,7 +430,7 @@ impl Min for Signed {
     type Item = f64;
 
     fn min(&self) -> Self::Item {
-        let mut base = i64::mask(64 - self.length + 1 , self.length - 1) as f64;
+        let mut base = i64::mask(64 - self.length + 1, self.length - 1) as f64;
         base *= self.factor;
         base += self.offset;
         base
@@ -459,13 +462,13 @@ impl TryDecode<f64> for Signed {
                 let bit_in_start_byte = self.start % 8;
                 let end_byte = (self.start + self.length - 1).div(8);
 
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let mut slice = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
                 let s = start_byte..=end_byte;
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < 8) {
-                    match data.data().get(byte_index as usize){
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i, _)| *i < 8) {
+                    match data.data().get(byte_index as usize) {
                         None => {
                             slice[i] = 0;
-                        },
+                        }
                         Some(value) => {
                             slice[i] = *value;
                         }
@@ -484,7 +487,7 @@ impl TryDecode<f64> for Signed {
                 result *= &self.factor;
                 result += &self.offset;
                 Ok(result)
-            },
+            }
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
@@ -496,17 +499,17 @@ impl TryDecode<f64> for Signed {
                 let end_byte = (7 - self.start % 8) + 8 * self.start.div(8);
                 let end_byte = (end_byte + self.length - 1).div(8);
 
-                let mut slice = [0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                let mut slice = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
                 let s = start_byte..=end_byte;
 
                 let min_data = min(8, s.len());
-                for (i, byte_index) in s.into_iter().enumerate().filter(|(i,_)| *i < min_data) {
-                    match data.data().get(byte_index as usize){
+                for (i, byte_index) in s.into_iter().enumerate().filter(|(i, _)| *i < min_data) {
+                    match data.data().get(byte_index as usize) {
                         None => {
-                            slice[min_data-i-1] = 0;
-                        },
+                            slice[min_data - i - 1] = 0;
+                        }
                         Some(value) => {
-                            slice[min_data-i-1] = *value;
+                            slice[min_data - i - 1] = *value;
                         }
                     }
                 }
@@ -572,7 +575,7 @@ impl TryEncode<f64> for Signed {
 
                     value >>= 1;
                 }
-            },
+            }
             Endian::Big => {
                 let shift = (7 - self.start % 8) + 8 * self.start.div(8);
                 let shift = (8 * data.dlc()) as isize - (shift as isize) - (self.length as isize);
@@ -617,7 +620,6 @@ impl TryEncode<f64> for Signed {
 }
 
 impl Encode<f64> for Signed {}
-
 
 // #[derive(Debug,PartialEq)]
 // pub struct Float32 {
@@ -962,10 +964,10 @@ impl Encode<f64> for Signed {}
 #[cfg(test)]
 mod tests {
     use crate::decode::TryDecode;
-    use crate::encode::{EncodeError, TryEncode, Encode};
+    use crate::encode::{Encode, EncodeError, TryEncode};
     use crate::utils::{Endian, Mask};
     // use crate::signals::{Bit, Unsigned, Raw, DataError, Float32, Signed};
-    use crate::signals::{Bit, Unsigned, DecodeError, Signed, Min, Max};
+    use crate::signals::{Bit, DecodeError, Max, Min, Signed, Unsigned};
 
     #[test]
     fn test_unsigned_001() {
@@ -1034,7 +1036,7 @@ mod tests {
             let bit = Bit::new(i);
             let data = [u8::mask(1, i)];
             let mut data_to_encode = [0u8];
-            Encode::encode(&bit,&mut data_to_encode, true);
+            Encode::encode(&bit, &mut data_to_encode, true);
 
             assert_eq!(data, data_to_encode);
         }
@@ -1090,8 +1092,8 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_001() {
-        let bit = Unsigned::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
-        let data = [255u8, 0, 0, 0, 0, 0,0, 0];
+        let bit = Unsigned::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
+        let data = [255u8, 0, 0, 0, 0, 0, 0, 0];
 
         let decode = bit.try_decode(&data);
         println!("{:?}", &decode);
@@ -1100,8 +1102,8 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_002() {
-        let bit = Unsigned::new(7, 8, 1.0, 0.0,Endian::Big).unwrap();
-        let data = [255u8, 0, 0, 0, 0, 0,0, 0];
+        let bit = Unsigned::new(7, 8, 1.0, 0.0, Endian::Big).unwrap();
+        let data = [255u8, 0, 0, 0, 0, 0, 0, 0];
 
         let decode = bit.try_decode(&data);
         println!("{:?}", &decode);
@@ -1110,8 +1112,8 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_004() {
-        let bit = Unsigned::new(4, 8, 1.0, 0.0,Endian::Little).unwrap();
-        let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
+        let bit = Unsigned::new(4, 8, 1.0, 0.0, Endian::Little).unwrap();
+        let data = [0b11110000, 0b00001111, 0, 0, 0, 0, 0, 0];
 
         let decode = bit.try_decode(&data);
         println!("{:?}", &decode);
@@ -1120,8 +1122,8 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_005() {
-        let bit = Unsigned::new(4, 8, 2.0, 1337.0,Endian::Little).unwrap();
-        let data = [0b11110000, 0b00001111, 0, 0, 0, 0,0, 0];
+        let bit = Unsigned::new(4, 8, 2.0, 1337.0, Endian::Little).unwrap();
+        let data = [0b11110000, 0b00001111, 0, 0, 0, 0, 0, 0];
 
         let decode = bit.try_decode(&data);
         println!("{:?}", &decode);
@@ -1130,8 +1132,8 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_006() {
-        let sig = Unsigned::new(3, 8, 2.0, 1337.0,Endian::Big).unwrap();
-        let data = [0b0000_1111, 0b00001111, 0, 0, 0, 0,0, 0];
+        let sig = Unsigned::new(3, 8, 2.0, 1337.0, Endian::Big).unwrap();
+        let data = [0b0000_1111, 0b00001111, 0, 0, 0, 0, 0, 0];
 
         let decode = sig.try_decode(&data);
         println!("{:?}", &decode);
@@ -1140,7 +1142,7 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_007() {
-        let sig = Unsigned::new(0, 9, 2.0, 1337.0,Endian::Little).unwrap();
+        let sig = Unsigned::new(0, 9, 2.0, 1337.0, Endian::Little).unwrap();
         let data = [0b0000_1111];
 
         let decode = sig.try_decode(&data);
@@ -1150,7 +1152,7 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_008() {
-        let sig = Unsigned::new(6, 8, 2.0, 1337.0,Endian::Big).unwrap();
+        let sig = Unsigned::new(6, 8, 2.0, 1337.0, Endian::Big).unwrap();
         let data = [0b0000_1111];
 
         let decode = sig.try_decode(&data);
@@ -1160,28 +1162,28 @@ mod tests {
 
     #[test]
     fn test_decode_unsigned_min_max_001() {
-        let sig = Unsigned::new(6, 8, 2.0, 1337.0,Endian::Little).unwrap();
+        let sig = Unsigned::new(6, 8, 2.0, 1337.0, Endian::Little).unwrap();
         assert_eq!(sig.min(), 1337.0);
         assert_eq!(sig.max(), (255.0 * 2.0) + 1337.0);
     }
 
     #[test]
     fn test_decode_unsigned_min_max_002() {
-        let sig = Unsigned::new(6, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let sig = Unsigned::new(6, 8, 1.0, 0.0, Endian::Little).unwrap();
         assert_eq!(sig.min(), 0.0);
         assert_eq!(sig.max(), 255.0);
     }
 
     #[test]
     fn test_decode_unsigned_min_max_003() {
-        let sig = Unsigned::new(6, 16, 1.0, 0.0,Endian::Little).unwrap();
+        let sig = Unsigned::new(6, 16, 1.0, 0.0, Endian::Little).unwrap();
         assert_eq!(sig.min(), 0.0);
         assert_eq!(sig.max(), 256.0 * 256.0 - 1.0);
     }
 
     #[test]
     fn test_encode_unsigned_001() {
-        let unsigned = Unsigned::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Unsigned::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         for i in 0..=255u8 {
             let mut data = [0u8];
 
@@ -1193,7 +1195,7 @@ mod tests {
 
     #[test]
     fn test_encode_unsigned_002() {
-        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0u8, 0u8];
 
         let result = unsigned.try_encode(&mut data, 255.0);
@@ -1203,7 +1205,7 @@ mod tests {
 
     #[test]
     fn test_encode_unsigned_004() {
-        let unsigned = Unsigned::new(2, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let unsigned = Unsigned::new(2, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0u8, 0u8];
 
         let result = unsigned.try_encode(&mut data, 255.0);
@@ -1213,7 +1215,7 @@ mod tests {
 
     #[test]
     fn test_encode_unsigned_005() {
-        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0xA0u8, 0x0Bu8];
 
         let result = unsigned.try_encode(&mut data, 255.0);
@@ -1223,7 +1225,7 @@ mod tests {
 
     #[test]
     fn test_encode_unsigned_006() {
-        let unsigned = Unsigned::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let unsigned = Unsigned::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0xA0u8, 0x0Bu8];
 
         let result = unsigned.try_encode(&mut data, 254_f64);
@@ -1235,7 +1237,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_001() {
-        let sig = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let sig = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let data = [0b0111_1111];
 
         let decode = sig.try_decode(&data);
@@ -1245,7 +1247,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_002() {
-        let sig = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let sig = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let data = [0b1000_0000];
 
         let decode = sig.try_decode(&data);
@@ -1255,7 +1257,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_003() {
-        let sig = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let sig = Signed::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let data = [0b0000_0111, 0b1111_0000];
 
         let decode = sig.try_decode(&data);
@@ -1265,7 +1267,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_004() {
-        let sig = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let sig = Signed::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let data = [0b0000_1000, 0b0000_1111];
 
         let decode = sig.try_decode(&data);
@@ -1275,7 +1277,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_005() {
-        let sig = Signed::new(0, 8, 42.0, 1337.0,Endian::Little).unwrap();
+        let sig = Signed::new(0, 8, 42.0, 1337.0, Endian::Little).unwrap();
         let data = [0b0111_1111];
 
         let decode = sig.try_decode(&data);
@@ -1285,7 +1287,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_006() {
-        let sig = Signed::new(3, 8, 42.0, 1337.0,Endian::Big).unwrap();
+        let sig = Signed::new(3, 8, 42.0, 1337.0, Endian::Big).unwrap();
         let data = [0b0000_0111, 0b1111_0000];
 
         let decode = sig.try_decode(&data);
@@ -1295,7 +1297,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_007() {
-        let sig = Signed::new(1, 8, 42.0, 1337.0,Endian::Little).unwrap();
+        let sig = Signed::new(1, 8, 42.0, 1337.0, Endian::Little).unwrap();
         let data = [0b0000_0111];
 
         let decode = sig.try_decode(&data);
@@ -1305,7 +1307,7 @@ mod tests {
 
     #[test]
     fn test_decode_signed_008() {
-        let sig = Signed::new(6, 8, 42.0, 1337.0,Endian::Big).unwrap();
+        let sig = Signed::new(6, 8, 42.0, 1337.0, Endian::Big).unwrap();
         let data = [0b0000_0111];
 
         let decode = sig.try_decode(&data);
@@ -1313,16 +1315,16 @@ mod tests {
         assert_eq!(decode, Result::Err(DecodeError::NotEnoughData));
     }
 
-        #[test]
+    #[test]
     fn test_decode_signed_min_max_001() {
-        let sig = Signed::new(6, 8, 2.0, 1337.0,Endian::Little).unwrap();
+        let sig = Signed::new(6, 8, 2.0, 1337.0, Endian::Little).unwrap();
         assert_eq!(sig.min(), -128.0 * 2.0 + 1337.0);
         assert_eq!(sig.max(), 127.0 * 2.0 + 1337.0);
     }
 
     #[test]
     fn test_encode_signed_001() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         for i in 0..=127u8 {
             let mut data = [0u8];
 
@@ -1334,7 +1336,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_002() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let mut data = [0u8];
 
         let result = unsigned.try_encode(&mut data, -128_f64);
@@ -1344,7 +1346,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_003() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let mut data = [0u8];
 
         let result = unsigned.try_encode(&mut data, -1_f64);
@@ -1354,7 +1356,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_004() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let mut data = [0u8];
 
         let result = unsigned.try_encode(&mut data, 128_f64);
@@ -1364,7 +1366,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_005() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let mut data = [0u8];
 
         let result = unsigned.try_encode(&mut data, -129_f64);
@@ -1374,7 +1376,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_006() {
-        let unsigned = Signed::new(0, 8, 1.0, 0.0,Endian::Little).unwrap();
+        let unsigned = Signed::new(0, 8, 1.0, 0.0, Endian::Little).unwrap();
         let mut data = [];
 
         let result = unsigned.try_encode(&mut data, -128_f64);
@@ -1384,7 +1386,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_007() {
-        let unsigned = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let unsigned = Signed::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0u8, 0u8];
 
         let result = unsigned.try_encode(&mut data, 127_f64);
@@ -1394,7 +1396,7 @@ mod tests {
 
     #[test]
     fn test_encode_signed_008() {
-        let signed = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let signed = Signed::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0b0000_0000u8, 0b0000_0000u8];
 
         let result = signed.try_encode(&mut data, -128_f64);
@@ -1404,14 +1406,13 @@ mod tests {
 
     #[test]
     fn test_encode_signed_009() {
-        let signed = Signed::new(3, 8, 1.0, 0.0,Endian::Big).unwrap();
+        let signed = Signed::new(3, 8, 1.0, 0.0, Endian::Big).unwrap();
         let mut data = [0b1000_0000u8, 0b0000_0001u8];
 
         let result = signed.try_encode(&mut data, -1_f64);
         assert!(result.is_ok());
         assert_eq!(data, [0b1000_1111u8, 0b1111_0001u8]);
     }
-
 
     // #[test]
     // fn test_decode_signed_min_max_002() {

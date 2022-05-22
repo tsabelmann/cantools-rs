@@ -27,15 +27,15 @@ pub mod data;
 pub use data::{CANRead, CANWrite};
 
 pub mod utils;
-pub use utils::{Mask, Endian};
+pub use utils::{Endian, Mask};
 
-#[cfg(feature = "decode")]
 pub mod decode;
+pub use decode::{Decode, DefaultDecode, TryDecode};
 
-#[cfg(feature = "encode")]
 pub mod encode;
+pub use encode::{Encode, TryEncode};
 
-#[cfg(feature = "signals")]
 pub mod signals;
+pub use signals::{Bit, LengthError, Signed, Unsigned};
 
 pub mod logging;

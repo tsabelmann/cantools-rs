@@ -27,7 +27,7 @@ pub enum EncodeError {
     /// The value to encode is smaller than the minimum value encodable.
     MinError,
     /// The value to encode is greater than the maximum value encodable.
-    MaxError
+    MaxError,
 }
 
 /// A trait modeling the failable encoding of data.
@@ -53,7 +53,7 @@ pub trait Encode<T>: TryEncode<T> {
     fn encode<D: CANWrite>(&self, data: &mut D, value: T) {
         match self.try_encode(data, value) {
             Ok(_) => (),
-            Err(_) => panic!("cannot encode data")
+            Err(_) => panic!("cannot encode data"),
         }
     }
 }
