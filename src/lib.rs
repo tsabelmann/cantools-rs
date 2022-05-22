@@ -38,4 +38,5 @@ pub use encode::{Encode, TryEncode};
 pub mod signals;
 pub use signals::{Bit, LengthError, Signed, Unsigned};
 
+pub mod formats;
 pub mod logging;
